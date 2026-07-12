@@ -1,0 +1,9 @@
+# Minimal baseline for now. Expanded with the custom rule set described in
+# 07_CODING_STANDARDS.md (layering enforcement, etc.) in Milestone 0, Task 7 —
+# not duplicated here to keep this task's diff focused on the skeleton only.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
