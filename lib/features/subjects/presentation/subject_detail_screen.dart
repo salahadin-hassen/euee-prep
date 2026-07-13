@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/tokens.dart';
 import 'mock/mock_chapters.dart';
 import 'models/chapter_ui_model.dart';
+import 'study_resources_screen.dart';
 import 'widgets/grade_section.dart';
 import 'widgets/subject_detail_header.dart';
 
@@ -57,12 +58,16 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
     });
   }
 
-  void _handleChapterTap(ChapterUiModel chapter) {
-    // TODO(integration): navigate to the Study Resources screen for
-    // this chapter (Decision 014: Chapter → Study Resources → Practice).
-    // Not yet designed.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${chapter.title} — Study Resources coming soon')),
+  void _handleChapterTap(ChapterUiModel chapter, int grade) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => StudyResourcesScreen(
+          chapterId: chapter.chapterId,
+          chapterTitle: chapter.title,
+          grade: grade,
+          subjectName: widget.subjectName,
+        ),
+      ),
     );
   }
 
@@ -99,7 +104,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             // expanded, others collapsed, until real "most recently
             // studied" data exists.
             initiallyExpanded: section.grade == 12,
-            onChapterTap: _handleChapterTap,
+            onChapterTap: (chapter) => _handleChapterTap(chapter, section.grade),
           ),
         const SizedBox(height: AppSpacing.spaceLg),
       ],
