@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/tokens.dart';
+import 'flashcards_screen.dart';
 import 'mock/mock_study_resources.dart';
 import 'models/study_resource_ui_model.dart';
 import 'widgets/chapter_context_header.dart';
@@ -62,12 +63,24 @@ class _StudyResourcesScreenState extends State<StudyResourcesScreen> {
   }
 
   void _handleResourceTap(StudyResourceUiModel resource) {
-    // TODO(integration): navigate to the Notes / Flashcards / Mind Map
-    // screen for this chapter. Not yet designed.
+    if (resource.type == StudyResourceType.flashcards) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => FlashcardsScreen(
+            chapterId: widget.chapterId,
+            chapterTitle: widget.chapterTitle,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // TODO(integration): navigate to the Notes / Mind Map screen for
+    // this chapter. Not yet designed.
     final label = switch (resource.type) {
       StudyResourceType.notes => 'Notes',
-      StudyResourceType.flashcards => 'Flashcards',
       StudyResourceType.mindMap => 'Mind Map',
+      StudyResourceType.flashcards => 'Flashcards', // unreachable here
     };
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$label screen coming soon')),
