@@ -4,6 +4,7 @@ import '../../../core/design/tokens.dart';
 import '../../entitlements/presentation/payment_submission_flow.dart';
 import 'mock/mock_subjects.dart';
 import 'models/subject_ui_model.dart';
+import 'subject_detail_screen.dart';
 import 'widgets/subject_card.dart';
 import 'widgets/subject_list_header.dart';
 
@@ -50,11 +51,14 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
 
   void _handleSubjectTap(SubjectUiModel subject) {
     if (subject.isEntitled) {
-      // TODO(integration): navigate to the Subject detail screen
-      // (Grade Sections → Chapter → Study Resources → Practice, per
-      // Decision 014's navigation flow). Not yet designed.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${subject.name} detail screen coming soon')),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SubjectDetailScreen(
+            subjectId: subject.subjectId,
+            subjectName: subject.name,
+            overallProgress: subject.progress ?? 0.0,
+          ),
+        ),
       );
       return;
     }

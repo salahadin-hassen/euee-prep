@@ -35,6 +35,16 @@
 //   ));
 // }
 
+// import 'package:flutter/material.dart';
+// import 'features/subjects/presentation/subject_list_screen.dart';
+
+// void main() {
+//   runApp(const MaterialApp(
+//     home: SubjectListScreen(),
+//     debugShowCheckedModeBanner: false,
+//   ));
+// }
+
 import 'package:flutter/material.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 
