@@ -25,12 +25,22 @@
 //     );
 //   }
 // }
+// import 'package:flutter/material.dart';
+// import 'features/entitlements/presentation/payment_history_screen.dart';
+
+// void main() {
+//   runApp(const MaterialApp(
+//     home: PaymentHistoryScreen(),
+//     debugShowCheckedModeBanner: false,
+//   ));
+// }
+
 import 'package:flutter/material.dart';
-import 'features/entitlements/presentation/payment_history_screen.dart';
+import 'features/subjects/presentation/subject_list_screen.dart';
 
 void main() {
   runApp(const MaterialApp(
-    home: PaymentHistoryScreen(),
+    home: SubjectListScreen(),
     debugShowCheckedModeBanner: false,
   ));
 }
