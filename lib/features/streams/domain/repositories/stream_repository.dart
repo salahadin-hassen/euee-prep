@@ -4,4 +4,6 @@ abstract interface class StreamRepository {
   Future<StreamModel> insert(StreamModel stream);
 
   Future<List<StreamModel>> getAll();
+
+  Future<StreamModel?> getBySlug(String slug);
 }

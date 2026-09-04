@@ -23,4 +23,10 @@ class StreamRepositoryImpl implements StreamRepository {
         .map((model) => StreamModel(id: model.id, slug: model.slug))
         .toList();
   }
+
+  @override
+  Future<StreamModel?> getBySlug(String slug) async {
+    final model = await _localDataSource.getBySlug(slug);
+    return model == null ? null : StreamModel(id: model.id, slug: model.slug);
+  }
 }

@@ -21,4 +21,13 @@ class StreamLocalDataSource {
         .map((row) => StreamPersistenceModel(id: row.id, slug: row.slug))
         .toList();
   }
+
+  Future<StreamPersistenceModel?> getBySlug(String slug) async {
+    final row = await (_database.select(_database.streams)
+          ..where((stream) => stream.slug.equals(slug)))
+        .getSingleOrNull();
+    return row == null
+        ? null
+        : StreamPersistenceModel(id: row.id, slug: row.slug);
+  }
 }

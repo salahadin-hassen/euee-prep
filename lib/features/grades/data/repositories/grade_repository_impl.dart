@@ -23,4 +23,10 @@ class GradeRepositoryImpl implements GradeRepository {
         .map((model) => Grade(id: model.id, level: model.level))
         .toList();
   }
+
+  @override
+  Future<Grade?> getByLevel(int level) async {
+    final model = await _localDataSource.getByLevel(level);
+    return model == null ? null : Grade(id: model.id, level: model.level);
+  }
 }

@@ -34,4 +34,22 @@ class SubjectLocalDataSource {
         )
         .toList();
   }
+
+  Future<SubjectPersistenceModel?> getByStreamAndSlug(
+    int streamId,
+    String slug,
+  ) async {
+    final row = await (_database.select(_database.subjects)
+          ..where((subject) =>
+              subject.streamId.equals(streamId) & subject.slug.equals(slug)))
+        .getSingleOrNull();
+    return row == null
+        ? null
+        : SubjectPersistenceModel(
+            id: row.id,
+            streamId: row.streamId,
+            slug: row.slug,
+            title: row.title,
+          );
+  }
 }

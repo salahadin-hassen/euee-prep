@@ -48,6 +48,13 @@ class ContentPackLocalDataSource {
     return row == null ? null : _mapRow(row);
   }
 
+  Future<ContentPackPersistenceModel?> getById(String id) async {
+    final row = await (_database.select(_database.contentPacks)
+          ..where((pack) => pack.id.equals(id)))
+        .getSingleOrNull();
+    return row == null ? null : _mapRow(row);
+  }
+
   ContentPackPersistenceModel _mapRow(ContentPack row) {
     return ContentPackPersistenceModel(
       id: row.id,

@@ -26,6 +26,12 @@ class ContentPackRepositoryImpl implements ContentPackRepository {
     return model == null ? null : _toDomain(model);
   }
 
+  @override
+  Future<ContentPack?> getById(String id) async {
+    final model = await _localDataSource.getById(id);
+    return model == null ? null : _toDomain(model);
+  }
+
   ContentPackPersistenceModel _toPersistence(ContentPack pack) {
     return ContentPackPersistenceModel(
       id: pack.id,

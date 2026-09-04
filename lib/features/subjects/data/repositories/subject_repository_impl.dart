@@ -40,4 +40,17 @@ class SubjectRepositoryImpl implements SubjectRepository {
         )
         .toList();
   }
+
+  @override
+  Future<Subject?> getByStreamAndSlug(int streamId, String slug) async {
+    final model = await _localDataSource.getByStreamAndSlug(streamId, slug);
+    return model == null
+        ? null
+        : Subject(
+            id: model.id,
+            streamId: model.streamId,
+            slug: model.slug,
+            title: model.title,
+          );
+  }
 }

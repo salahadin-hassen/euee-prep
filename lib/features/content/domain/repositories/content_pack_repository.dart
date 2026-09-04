@@ -6,4 +6,6 @@ abstract interface class ContentPackRepository {
   Future<List<ContentPack>> getAll();
 
   Future<ContentPack?> getLatestForPackKey(String packKey);
+
+  Future<ContentPack?> getById(String id);
 }

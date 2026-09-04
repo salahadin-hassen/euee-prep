@@ -15,6 +15,12 @@ class ResourceRepositoryImpl implements ResourceRepository {
   }
 
   @override
+  Future<List<Resource>> getAll() async {
+    final models = await _localDataSource.getAll();
+    return models.map(_toDomain).toList();
+  }
+
+  @override
   Future<List<Resource>> getByTopicId(int topicId) async {
     final models = await _localDataSource.getByTopicId(topicId);
     return models.map(_toDomain).toList();

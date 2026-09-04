@@ -25,25 +25,33 @@ class ResourceLocalDataSource {
     return resource;
   }
 
+  Future<List<ResourcePersistenceModel>> getAll() async {
+    final rows = await (_database.select(_database.resources)
+          ..orderBy([(r) => OrderingTerm(expression: r.id)]))
+        .get();
+
+    return rows.map(_mapRow).toList();
+  }
+
   Future<List<ResourcePersistenceModel>> getByTopicId(int topicId) async {
     final rows = await (_database.select(_database.resources)
           ..where((r) => r.topicId.equals(topicId))
           ..orderBy([(r) => OrderingTerm(expression: r.orderIndex)]))
         .get();
 
-    return rows
-        .map(
-          (row) => ResourcePersistenceModel(
-            id: row.id,
-            topicId: row.topicId,
-            sourcePackId: row.sourcePackId,
-            packLocalId: row.packLocalId,
-            type: row.type,
-            title: row.title,
-            content: row.content,
-            orderIndex: row.orderIndex,
-          ),
-        )
-        .toList();
+    return rows.map(_mapRow).toList();
+  }
+
+  ResourcePersistenceModel _mapRow(Resource row) {
+    return ResourcePersistenceModel(
+      id: row.id,
+      topicId: row.topicId,
+      sourcePackId: row.sourcePackId,
+      packLocalId: row.packLocalId,
+      type: row.type,
+      title: row.title,
+      content: row.content,
+      orderIndex: row.orderIndex,
+    );
   }
 }

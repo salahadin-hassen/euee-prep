@@ -1,0 +1,104 @@
+{
+  "pack_version": "1.0.0",
+  "schema_version": "2",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "checksum": "fnv1a64:bf7797eea394e66f",
+  "minimum_app_version": "0.1.0",
+  "stream": "natural_science",
+  "subject": {
+    "slug": "physics",
+    "title": "Physics"
+  },
+  "chapters": [
+    {
+      "id": "ch-mechanics-11",
+      "grade": 11,
+      "title": "Mechanics",
+      "order_index": 0,
+      "topics": [
+        {
+          "id": "t-newton-laws",
+          "title": "Newton's Laws of Motion",
+          "order_index": 0,
+          "questions": [
+            {
+              "id": "q-newton-1",
+              "prompt": "A 5 kg mass accelerates at 2 m/s². What is the net force acting on it?",
+              "choices": ["5 N", "10 N", "15 N", "20 N"],
+              "correct_choice_index": 1,
+              "explanation": "F = ma = 5 kg × 2 m/s² = 10 N",
+              "textbook_reference": "Physics Grade 11, Unit 2",
+              "exam_year_ec": 2015,
+              "topic_refs": ["t-newton-laws"],
+              "image_reference": null,
+              "graph_reference": null,
+              "diagram_reference": null,
+              "table_reference": null
+            },
+            {
+              "id": "q-newton-energy-1",
+              "prompt": "A 2 kg ball is dropped from a height of 5 m. Using energy conservation, what is its speed just before hitting the ground?",
+              "choices": ["5 m/s", "10 m/s", "20 m/s", "50 m/s"],
+              "correct_choice_index": 1,
+              "explanation": "mgh = ½mv², so v = √(2gh) = √(2 × 10 × 5) = 10 m/s",
+              "textbook_reference": "Physics Grade 11, Unit 3",
+              "exam_year_ec": 2015,
+              "topic_refs": ["t-newton-laws", "t-energy-conservation"]
+            }
+          ],
+          "resources": [
+            {
+              "id": "res-newton-note",
+              "type": "note",
+              "title": "Newton's Laws Summary",
+              "content": "# Newton's Laws of Motion\n\n1. First Law (Inertia)\n2. Second Law (F = ma)\n3. Third Law (Action–Reaction)",
+              "order_index": 0
+            },
+            {
+              "id": "res-newton-flashcard",
+              "type": "flashcard",
+              "title": "Second Law",
+              "content": "{\"front\": \"State Newton's second law of motion.\", \"back\": \"F = ma — force equals mass times acceleration.\"}",
+              "order_index": 1
+            }
+          ]
+        },
+        {
+          "id": "t-energy-conservation",
+          "title": "Energy Conservation",
+          "order_index": 1,
+          "questions": [
+            {
+              "id": "q-energy-1",
+              "prompt": "In an isolated system, which quantities are conserved?",
+              "choices": ["Momentum only", "Energy only", "Both energy and momentum", "Neither"],
+              "correct_choice_index": 2,
+              "explanation": "In an isolated system, both energy and momentum are conserved.",
+              "textbook_reference": "Physics Grade 11, Unit 3",
+              "exam_year_ec": 2015,
+              "topic_refs": ["t-energy-conservation"]
+            }
+          ],
+          "resources": [
+            {
+              "id": "res-energy-mindmap",
+              "type": "mindmap",
+              "title": "Energy Conservation Mind Map",
+              "content": "# Energy Conservation\n\n- Forms of energy\n  - Kinetic (½mv²)\n  - Potential (mgh)\n- Work–energy theorem\n- Conservation of mechanical energy",
+              "order_index": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "exams": [
+    {
+      "id": "exam-physics-2015-ec",
+      "year_ec": 2015,
+      "title": "EUEE Physics 2015",
+      "duration_seconds": 12600,
+      "question_ids": ["q-energy-1", "q-newton-1", "q-newton-energy-1"]
+    }
+  ]
+}

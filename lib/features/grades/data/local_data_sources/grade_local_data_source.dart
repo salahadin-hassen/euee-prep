@@ -21,4 +21,13 @@ class GradeLocalDataSource {
         .map((row) => GradePersistenceModel(id: row.id, level: row.level))
         .toList();
   }
+
+  Future<GradePersistenceModel?> getByLevel(int level) async {
+    final row = await (_database.select(_database.grades)
+          ..where((grade) => grade.level.equals(level)))
+        .getSingleOrNull();
+    return row == null
+        ? null
+        : GradePersistenceModel(id: row.id, level: row.level);
+  }
 }
