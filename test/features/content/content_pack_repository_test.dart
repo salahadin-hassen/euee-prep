@@ -11,18 +11,18 @@ void main() {
   late db.AppDatabase database;
   late ContentPackRepositoryImpl repository;
 
-  test('migrates a v2 database to v3 with content pack metadata', () async {
+  test('migrates a v4 database to v5 with Question prerequisites', () async {
     final oldDatabase = db.AppDatabase.forTesting(
       NativeDatabase.memory(
         setup: (rawDatabase) {
-          rawDatabase.execute('PRAGMA user_version = 2');
+          rawDatabase.execute('PRAGMA user_version = 4');
         },
       ),
     );
 
     await oldDatabase.customSelect('SELECT 1').get();
 
-    expect(oldDatabase.schemaVersion, 3);
+    expect(oldDatabase.schemaVersion, 5);
     expect(
       oldDatabase.allTables.map((table) => table.actualTableName),
       contains('content_packs'),

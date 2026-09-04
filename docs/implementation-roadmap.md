@@ -35,12 +35,13 @@ Nothing after this should start before it's done.
 Goal: the curriculum model (Grade → Subject → Chapter → Topic → Question, Decision 010/011) exists in the database, correctly, before anything else touches it.
 
 1. `feat: add Grade, Stream, Subject Local Data Sources and repositories` — content Local Data Sources enforce read-only access at this layer (Decision 015): no update/delete query methods exist, only insert (used by content import, Milestone 3). Repositories compose these Local Data Sources rather than executing SQL directly (Decision 026).
-2. `feat: add Chapter and Topic entities and repositories` — Chapter→(Grade, Subject), Topic→Chapter, same read-only constraint.
-3. `feat: add Question entity with many-to-many Topic mapping` — Decision 011; its own commit and dedicated tests given the relational complexity.
-4. `feat: add Exam entity with ordered question membership` (Decision 038) — the `exams` and `exam_questions` tables plus their Local Data Source/repository; ordering is stored data, never inferred.
-5. `feat: add Resource entity (notes, flashcards, mind maps) linked to Topic` — explanations are question-owned fields (Decision 037), never resources.
-6. `feat: add Attempt entity as insert-only` — no update/delete operations exist for Attempt at all (Decision 016) — enforce this at the repository interface, not just by convention.
-7. `test: add repository test suite with seed fixture data` — one subject's worth of fixture data (recommend Physics), including one full exam paper, used to prove the schema.
+2. `chore: add ContentPack metadata prerequisite schema` — add only the `content_packs` persistence table and its version/identity constraints. This is required before Chapter/Topic because their `source_pack_id` foreign keys are non-nullable. This task does not implement pack import, validation, downloading, hosting, synchronization, or UI.
+3. `feat: add Chapter and Topic entities and repositories` — Chapter→(Grade, Subject), Topic→Chapter, same read-only constraint. Their required `source_pack_id` foreign keys now reference the schema-only ContentPack metadata table.
+4. `feat: add Question entity with many-to-many Topic mapping` — Decision 011; its own commit and dedicated tests given the relational complexity.
+5. `feat: add Exam entity with ordered question membership` (Decision 038) — the `exams` and `exam_questions` tables plus their Local Data Source/repository; ordering is stored data, never inferred.
+6. `feat: add Resource entity (notes, flashcards, mind maps) linked to Topic` — explanations are question-owned fields (Decision 037), never resources.
+7. `feat: add Attempt entity as insert-only` — no update/delete operations exist for Attempt at all (Decision 016) — enforce this at the repository interface, not just by convention.
+8. `test: add repository test suite with seed fixture data` — one subject's worth of fixture data (recommend Physics), including one full exam paper, used to prove the schema.
 
 ---
 
@@ -60,7 +61,7 @@ No payment UI yet — this milestone is data-layer and access-control logic only
 
 ## Milestone 3 — Content Pipeline (moved earlier — was Milestone 8)
 
-Goal: real content exists to validate the data model and UI against, before more UI gets built on synthetic fixtures alone.
+Goal: real content exists to validate the data model and UI against, before more UI gets built on synthetic fixtures alone. The schema-only `content_packs` metadata prerequisite is already provided by Milestone 1; this milestone implements the separate content-pack import system.
 
 1. `feat: define content pack file format` — schema for a downloadable pack, including the versioning fields from Decision 021 (`pack_version`, `schema_version`, `generated_at`, `checksum`, `minimum_app_version`).
 2. `feat: build content validation script` (Python) — catches malformed packs and missing versioning metadata before they ship.

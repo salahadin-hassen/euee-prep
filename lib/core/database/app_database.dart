@@ -11,7 +11,18 @@ part 'app_database.g.dart';
 ///
 /// Schema changes are versioned explicitly. Content-pack metadata is stored
 /// before content tables so their source-pack foreign keys remain valid.
-@DriftDatabase(tables: [Grades, Streams, Subjects, ContentPacks])
+@DriftDatabase(
+  tables: [
+    Grades,
+    Streams,
+    Subjects,
+    ContentPacks,
+    Chapters,
+    Topics,
+    Questions,
+    QuestionTopics,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -21,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.connection);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,6 +50,14 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.createTable(contentPacks);
+          }
+          if (from < 4) {
+            await m.createTable(chapters);
+            await m.createTable(topics);
+          }
+          if (from < 5) {
+            await m.createTable(questions);
+            await m.createTable(questionTopics);
           }
         },
       );
@@ -106,6 +125,101 @@ class ContentPacks extends Table {
   List<Set<Column<Object>>> get uniqueKeys => [
         {packKey, packVersion},
       ];
+}
+
+@TableIndex(name: 'idx_chapters_subject_grade', columns: {#subjectId, #gradeId})
+class Chapters extends Table {
+  IntColumn get id => integer()();
+
+  IntColumn get subjectId => integer().references(Subjects, #id)();
+
+  IntColumn get gradeId => integer().references(Grades, #id)();
+
+  TextColumn get sourcePackId => text().references(ContentPacks, #id)();
+
+  TextColumn get packLocalId => text()();
+
+  TextColumn get title => text()();
+
+  IntColumn get orderIndex => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {sourcePackId, packLocalId},
+      ];
+}
+
+@TableIndex(name: 'idx_topics_chapter_id', columns: {#chapterId})
+class Topics extends Table {
+  IntColumn get id => integer()();
+
+  IntColumn get chapterId => integer().references(Chapters, #id)();
+
+  TextColumn get sourcePackId => text().references(ContentPacks, #id)();
+
+  TextColumn get packLocalId => text()();
+
+  TextColumn get title => text()();
+
+  IntColumn get orderIndex => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {sourcePackId, packLocalId},
+      ];
+}
+
+@TableIndex(name: 'idx_questions_source_pack', columns: {#sourcePackId})
+class Questions extends Table {
+  IntColumn get id => integer()();
+
+  TextColumn get sourcePackId => text().references(ContentPacks, #id)();
+
+  TextColumn get packLocalId => text()();
+
+  TextColumn get prompt => text()();
+
+  TextColumn get choicesJson => text()();
+
+  IntColumn get correctChoiceIndex => integer()();
+
+  TextColumn get explanation => text().nullable()();
+
+  TextColumn get textbookReference => text().nullable()();
+
+  IntColumn get examYearEc => integer().nullable()();
+
+  TextColumn get imageReference => text().nullable()();
+
+  TextColumn get graphReference => text().nullable()();
+
+  TextColumn get diagramReference => text().nullable()();
+
+  TextColumn get tableReference => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {sourcePackId, packLocalId},
+      ];
+}
+
+@TableIndex(name: 'idx_question_topics_topic', columns: {#topicId})
+class QuestionTopics extends Table {
+  IntColumn get questionId => integer().references(Questions, #id)();
+
+  IntColumn get topicId => integer().references(Topics, #id)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {questionId, topicId};
 }
 
 LazyDatabase _openConnection() {

@@ -6,6 +6,21 @@ This is the schema `drift` table definitions should mirror 1:1. SQL types shown 
 
 Year/time convention (Decision 039): `*_ec` fields are Ethiopian Calendar years identifying exam papers. `*_at` fields are ordinary ISO8601 system timestamps. The two namespaces are never interchangeable.
 
+### Schema migration dependency
+
+The implementation stages this canonical schema in dependency order:
+
+1. Schema v2: `grades`, `streams`, and `subjects`.
+2. The next migration: `content_packs` metadata and identity only.
+3. The following migration: `chapters` and `topics`.
+
+The `content_packs` table in step 2 is a persistence prerequisite for
+immutable content identity. It does not implement pack downloading,
+validation, importing, hosting, synchronization, or UI. Those remain later
+content-pipeline work. Chapters and topics must retain their required
+`source_pack_id` foreign keys and must not be created with invalid or
+transitional pack identities.
+
 ---
 
 ## Local install identity (Decision 032)
@@ -142,6 +157,12 @@ CREATE TABLE exam_questions (
 ```
 
 ## Content pack metadata (Decision 021 — versioning; Decisions 034/035 — coexistence)
+
+This metadata table is the prerequisite for `chapters` and `topics`.
+Their required `source_pack_id` columns reference `content_packs(id)`, and
+their `(source_pack_id, pack_local_id)` uniqueness constraints depend on a
+real imported-pack identity. Creating this table ahead of the Chapter/Topic
+migration does not implement the later content-pack import system.
 
 ```sql
 -- A row per *imported version*. pack_key is the version-independent identity
