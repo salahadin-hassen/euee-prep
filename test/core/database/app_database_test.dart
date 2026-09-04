@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,14 +20,17 @@ void main() {
     // Executing any query forces the connection (and migration) to run.
     await database.customSelect('SELECT 1').get();
 
-    expect(database.schemaVersion, 1);
+    expect(database.schemaVersion, 2);
   });
 
-  test('database currently defines no business tables', () {
-    // Deliberate assertion for this task's scope (Milestone 0, Task 8):
-    // if this ever fails because someone added a table here, it should
-    // fail loudly — table additions belong to Milestone 1/2, each as its
-    // own commit, not silently folded into the scaffold.
-    expect(database.allTables, isEmpty);
+  test('database defines the current foundation tables', () {
+    final tableNames =
+        database.allTables.map((table) => table.actualTableName).toSet();
+
+    expect(tableNames, {
+      'grades',
+      'streams',
+      'subjects',
+    });
   });
 }

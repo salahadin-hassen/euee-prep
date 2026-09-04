@@ -92,7 +92,7 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.colorBackground,
         elevation: 0,
-        title: Text('EUEE Prep', style: AppTypography.typeHeading2),
+        title: const Text('EUEE Prep', style: AppTypography.typeHeading2),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -106,7 +106,7 @@ class _SubjectListScreenState extends State<SubjectListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!_isLoading)
-              SubjectListHeader(
+              const SubjectListHeader(
                 streamName: MockSubjects.preferredStreamName,
               ),
             Expanded(child: _buildBody()),

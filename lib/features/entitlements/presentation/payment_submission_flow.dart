@@ -40,7 +40,7 @@ class _PaymentSubmissionFlowState extends State<PaymentSubmissionFlow> {
   bool _isScreenshotAttached = false;
   final _transactionIdController = TextEditingController();
 
-  bool _isOffline = false; // TODO(integration): drive from real connectivity state.
+  final bool _isOffline = false; // TODO(integration): drive from real connectivity state.
   String? _submitError;
   String? _submittedRequestId;
 

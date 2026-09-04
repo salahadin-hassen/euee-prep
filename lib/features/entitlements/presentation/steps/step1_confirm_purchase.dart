@@ -48,7 +48,7 @@ class Step1ConfirmPurchase extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.spaceSm),
-              Text(
+              const Text(
                 'All Grade 9–12 content, downloadable, works offline',
                 style: AppTypography.typeCaption,
               ),

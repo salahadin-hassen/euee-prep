@@ -30,7 +30,7 @@ class PaymentHistoryScreen extends StatefulWidget {
 
 class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   bool _isLoading = true;
-  bool _isOffline = false; // TODO(integration): drive from real connectivity state.
+  final bool _isOffline = false; // TODO(integration): drive from real connectivity state.
   List<PaymentRequestUiModel> _requests = const [];
 
   @override
@@ -93,7 +93,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.colorBackground,
         elevation: 0,
-        title: Text('Payment History', style: AppTypography.typeHeading2),
+        title: const Text('Payment History', style: AppTypography.typeHeading2),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -105,7 +105,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (_isOffline) _OfflineBanner(),
+            if (_isOffline) const _OfflineBanner(),
             Expanded(child: _buildBody()),
             if (!_isLoading && _requests.isNotEmpty) _buildBottomCta(),
           ],

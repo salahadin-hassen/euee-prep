@@ -59,7 +59,7 @@ class PaymentRequestCard extends StatelessWidget {
     return Semantics(
       container: true,
       label:
-          '${request.streamName}, request ${request.requestId}, ${_timestampLabel}',
+          '${request.streamName}, request ${request.requestId}, $_timestampLabel',
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.colorSurface,

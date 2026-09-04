@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
+import '../../practice/presentation/models/practice_models.dart';
+import '../../practice/presentation/mock/mock_practice_questions.dart';
+import '../../practice/presentation/practice_screen.dart';
 import 'flashcards_screen.dart';
 import 'mock/mock_study_resources.dart';
 import 'models/study_resource_ui_model.dart';
@@ -87,11 +91,60 @@ class _StudyResourcesScreenState extends State<StudyResourcesScreen> {
     );
   }
 
-  void _handlePracticeTap() {
-    // TODO(integration): navigate to the Practice/Exam screen for this
-    // chapter's tagged questions (Decision 011). Not yet designed.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Practice screen coming soon')),
+  Future<void> _handlePracticeTap() async {
+    final mode = await _showModeSelector();
+    if (mode == null || !mounted) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PracticeScreen(
+          mode: mode,
+          questions: MockPracticeQuestions.forChapter(widget.chapterId),
+          chapterId: widget.chapterId,
+          chapterTitle: widget.chapterTitle,
+        ),
+      ),
+    );
+  }
+
+  Future<PracticeMode?> _showModeSelector() {
+    return showModalBottomSheet<PracticeMode>(
+      context: context,
+      backgroundColor: AppColors.colorSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.spaceMd),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose a mode', style: AppTypography.typeHeading3),
+              const SizedBox(height: AppSpacing.spaceMd),
+              _ModeOption(
+                title: 'Learn',
+                description: 'One at a time, immediate feedback, no timer.',
+                onTap: () => Navigator.of(context).pop(PracticeMode.learn),
+              ),
+              const SizedBox(height: AppSpacing.spaceSm),
+              _ModeOption(
+                title: 'Practice',
+                description: 'Immediate feedback, with an optional timer.',
+                onTap: () => Navigator.of(context).pop(PracticeMode.practice),
+              ),
+              const SizedBox(height: AppSpacing.spaceSm),
+              _ModeOption(
+                title: 'Exam',
+                description: 'Simulates the real EUEE — timed, jump between '
+                    'questions, feedback only at the end.',
+                onTap: () => Navigator.of(context).pop(PracticeMode.exam),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -175,6 +228,42 @@ class _StudyResourcesSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.colorDisabled.withOpacity(0.3),
         borderRadius: BorderRadius.circular(AppRadius.radiusSm),
+      ),
+    );
+  }
+}
+
+class _ModeOption extends StatelessWidget {
+  const _ModeOption({
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.spaceMd),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.colorBorder),
+          borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTypography.typeHeading3),
+            const SizedBox(height: AppSpacing.spaceXs),
+            Text(description, style: AppTypography.typeCaption),
+          ],
+        ),
       ),
     );
   }

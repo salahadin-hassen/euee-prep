@@ -62,9 +62,9 @@ class Step3SubmitProof extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (isOffline) _OfflineNotice(),
+              if (isOffline) const _OfflineNotice(),
               if (submitError != null) _ErrorBanner(message: submitError!),
-              Text('Screenshot of payment', style: AppTypography.typeBody),
+              const Text('Screenshot of payment', style: AppTypography.typeBody),
               const SizedBox(height: AppSpacing.spaceSm),
               ProofUploadField(
                 isAttached: isScreenshotAttached,
@@ -72,7 +72,7 @@ class Step3SubmitProof extends StatelessWidget {
                 onRemove: onRemoveScreenshot,
               ),
               const SizedBox(height: AppSpacing.spaceLg),
-              Text(
+              const Text(
                 'Transaction ID (optional if screenshot is clear)',
                 style: AppTypography.typeBody,
               ),
@@ -84,7 +84,7 @@ class Step3SubmitProof extends StatelessWidget {
               if (isScreenshotAttached &&
                   transactionIdController.text.trim().isEmpty) ...[
                 const SizedBox(height: AppSpacing.spaceSm),
-                Text(
+                const Text(
                   'Tip: also adding the transaction ID text helps us '
                   'verify faster.',
                   style: AppTypography.typeCaption,

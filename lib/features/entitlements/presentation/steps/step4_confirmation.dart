@@ -36,7 +36,7 @@ class Step4Confirmation extends StatelessWidget {
           children: [
             CopyableField(value: 'Request #$requestId'),
             const SizedBox(height: AppSpacing.spaceMd),
-            Text(
+            const Text(
               "We'll review this and unlock your content within 1–2 days. "
               'You can check status anytime in Payment History.',
               style: AppTypography.typeBody,

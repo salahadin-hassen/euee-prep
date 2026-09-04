@@ -132,7 +132,7 @@ class _CardFace extends StatelessWidget {
           ),
           if (isFront) ...[
             const SizedBox(height: AppSpacing.spaceMd),
-            Text('tap to flip', style: AppTypography.typeCaption),
+            const Text('tap to flip', style: AppTypography.typeCaption),
           ],
         ],
       ),

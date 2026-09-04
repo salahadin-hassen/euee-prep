@@ -110,7 +110,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.colorBackground,
         elevation: 0,
-        title: Text('Flashcards', style: AppTypography.typeHeading3),
+        title: const Text('Flashcards', style: AppTypography.typeHeading3),
         actions: [
           if (!_isLoading)
             Padding(

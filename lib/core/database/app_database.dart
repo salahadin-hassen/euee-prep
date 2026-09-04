@@ -9,18 +9,9 @@ part 'app_database.g.dart';
 
 /// The application's local Drift database.
 ///
-/// Deliberately empty of business tables at this stage (Milestone 0,
-/// Task 8 — database foundation only). Tables are added starting in
-/// Milestone 1 (Core Data Layer) and Milestone 2 (Entitlement Foundation),
-/// each as its own reviewable commit — see 10_IMPLEMENTATION_ROADMAP.md
-/// and docs/AI_RULES.md ("one feature per commit").
-///
-/// Schema version starts at 1. Every future table addition or column
-/// change bumps [schemaVersion] and adds a step to [migration] — never a
-/// silent modification of an already-shipped version. This mirrors the
-/// same immutability discipline Decision 015/021 apply to content packs,
-/// applied here to the local database schema itself.
-@DriftDatabase(tables: [])
+/// Schema changes are versioned explicitly. This first business schema adds
+/// only the curriculum reference entities covered by Milestone 1, Task 1.
+@DriftDatabase(tables: [Grades, Streams, Subjects])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -30,17 +21,60 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.connection);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA foreign_keys = ON');
+        },
         onCreate: (Migrator m) async {
           await m.createAll();
         },
-        // onUpgrade intentionally left as the default no-op for now — there
-        // is nothing to migrate *to* yet. The first real onUpgrade step
-        // arrives with Milestone 1's first table addition, not before.
+        onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 2) {
+            await m.createTable(grades);
+            await m.createTable(streams);
+            await m.createTable(subjects);
+          }
+        },
       );
+}
+
+class Grades extends Table {
+  IntColumn get id => integer()();
+
+  IntColumn get level => integer().unique()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class Streams extends Table {
+  IntColumn get id => integer()();
+
+  TextColumn get slug => text().unique()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class Subjects extends Table {
+  IntColumn get id => integer()();
+
+  IntColumn get streamId => integer().references(Streams, #id)();
+
+  TextColumn get slug => text()();
+
+  TextColumn get title => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {streamId, slug},
+      ];
 }
 
 LazyDatabase _openConnection() {

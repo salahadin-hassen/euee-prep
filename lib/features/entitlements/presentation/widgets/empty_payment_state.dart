@@ -27,7 +27,7 @@ class EmptyPaymentState extends StatelessWidget {
               color: AppColors.colorTextSecondary,
             ),
             const SizedBox(height: AppSpacing.spaceMd),
-            Text(
+            const Text(
               'No payment requests yet',
               style: AppTypography.typeHeading3,
               textAlign: TextAlign.center,
