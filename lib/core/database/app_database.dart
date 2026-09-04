@@ -9,9 +9,9 @@ part 'app_database.g.dart';
 
 /// The application's local Drift database.
 ///
-/// Schema changes are versioned explicitly. This first business schema adds
-/// only the curriculum reference entities covered by Milestone 1, Task 1.
-@DriftDatabase(tables: [Grades, Streams, Subjects])
+/// Schema changes are versioned explicitly. Content-pack metadata is stored
+/// before content tables so their source-pack foreign keys remain valid.
+@DriftDatabase(tables: [Grades, Streams, Subjects, ContentPacks])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -21,7 +21,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.connection);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -36,6 +36,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(grades);
             await m.createTable(streams);
             await m.createTable(subjects);
+          }
+          if (from < 3) {
+            await m.createTable(contentPacks);
           }
         },
       );
@@ -74,6 +77,34 @@ class Subjects extends Table {
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
         {streamId, slug},
+      ];
+}
+
+class ContentPacks extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get packKey => text()();
+
+  IntColumn get subjectId => integer().references(Subjects, #id)();
+
+  TextColumn get packVersion => text()();
+
+  TextColumn get schemaVersion => text()();
+
+  TextColumn get generatedAt => text()();
+
+  TextColumn get checksum => text()();
+
+  TextColumn get minimumAppVersion => text()();
+
+  TextColumn get importedAt => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {packKey, packVersion},
       ];
 }
 
