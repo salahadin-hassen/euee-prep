@@ -20,7 +20,7 @@ void main() {
     // Executing any query forces the connection (and migration) to run.
     await database.customSelect('SELECT 1').get();
 
-    expect(database.schemaVersion, 5);
+    expect(database.schemaVersion, 8);
   });
 
   test('database defines the current foundation tables', () {
@@ -36,6 +36,10 @@ void main() {
       'topics',
       'questions',
       'question_topics',
+      'exams',
+      'exam_questions',
+      'resources',
+      'attempts',
     });
   });
 }

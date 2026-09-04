@@ -21,6 +21,10 @@ part 'app_database.g.dart';
     Topics,
     Questions,
     QuestionTopics,
+    Exams,
+    ExamQuestions,
+    Resources,
+    Attempts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -32,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.connection);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -58,6 +62,16 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await m.createTable(questions);
             await m.createTable(questionTopics);
+          }
+          if (from < 6) {
+            await m.createTable(exams);
+            await m.createTable(examQuestions);
+          }
+          if (from < 7) {
+            await m.createTable(resources);
+          }
+          if (from < 8) {
+            await m.createTable(attempts);
           }
         },
       );
@@ -220,6 +234,99 @@ class QuestionTopics extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {questionId, topicId};
+}
+
+@TableIndex(name: 'idx_exams_subject_year', columns: {#subjectId, #examYearEc})
+class Exams extends Table {
+  IntColumn get id => integer()();
+
+  TextColumn get sourcePackId => text().references(ContentPacks, #id)();
+
+  TextColumn get packLocalId => text()();
+
+  IntColumn get subjectId => integer().references(Subjects, #id)();
+
+  IntColumn get examYearEc => integer()();
+
+  TextColumn get title => text().nullable()();
+
+  IntColumn get durationSeconds => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {sourcePackId, packLocalId},
+        {sourcePackId, subjectId, examYearEc},
+      ];
+}
+
+@TableIndex(name: 'idx_exam_questions_question', columns: {#questionId})
+class ExamQuestions extends Table {
+  IntColumn get examId => integer().references(Exams, #id)();
+
+  IntColumn get questionId => integer().references(Questions, #id)();
+
+  IntColumn get orderIndex => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {examId, questionId};
+}
+
+@TableIndex(name: 'idx_resources_topic_id', columns: {#topicId})
+class Resources extends Table {
+  IntColumn get id => integer()();
+
+  IntColumn get topicId => integer().references(Topics, #id)();
+
+  TextColumn get sourcePackId => text().references(ContentPacks, #id)();
+
+  TextColumn get packLocalId => text()();
+
+  TextColumn get type => text()();
+
+  TextColumn get title => text().nullable()();
+
+  TextColumn get content => text()();
+
+  IntColumn get orderIndex => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {sourcePackId, packLocalId},
+      ];
+}
+
+// -- Attempts: append-only, no update/delete (Decision 016)
+@TableIndex(name: 'idx_attempts_question_id', columns: {#questionId})
+@TableIndex(name: 'idx_attempts_attempted_at', columns: {#attemptedAt})
+@TableIndex(name: 'idx_attempts_subject_id', columns: {#subjectId})
+@TableIndex(name: 'idx_attempts_chapter_id', columns: {#chapterId})
+@TableIndex(name: 'idx_attempts_exam_id', columns: {#examId})
+class Attempts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  IntColumn get questionId => integer().references(Questions, #id)();
+
+  IntColumn get selectedChoiceIndex => integer()();
+
+  IntColumn get isCorrect => integer()();
+
+  TextColumn get attemptedAt => text()();
+
+  TextColumn get mode => text().nullable()();
+
+  IntColumn get durationSeconds => integer().nullable()();
+
+  IntColumn get subjectId => integer().references(Subjects, #id).nullable()();
+
+  IntColumn get chapterId => integer().references(Chapters, #id).nullable()();
+
+  IntColumn get examId => integer().references(Exams, #id).nullable()();
 }
 
 LazyDatabase _openConnection() {

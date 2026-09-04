@@ -15,19 +15,19 @@ void main() {
   late ChapterRepositoryImpl chapterRepository;
   late TopicRepositoryImpl topicRepository;
 
-  test('migrates a v4 database to v5 with existing Chapter and Topic tables',
+  test('migrates a v5 database to v8 with existing Chapter and Topic tables',
       () async {
     final oldDatabase = db.AppDatabase.forTesting(
       NativeDatabase.memory(
         setup: (rawDatabase) {
-          rawDatabase.execute('PRAGMA user_version = 4');
+          rawDatabase.execute('PRAGMA user_version = 5');
         },
       ),
     );
 
     await oldDatabase.customSelect('SELECT 1').get();
 
-    expect(oldDatabase.schemaVersion, 5);
+    expect(oldDatabase.schemaVersion, 8);
     expect(
       oldDatabase.allTables.map((table) => table.actualTableName),
       containsAll(<String>['chapters', 'topics']),

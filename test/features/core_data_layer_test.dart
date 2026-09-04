@@ -16,7 +16,7 @@ import 'package:euee_prep/features/subjects/domain/models/subject.dart';
 void main() {
   late db.AppDatabase database;
 
-  test('migrates an empty v1 database to v5', () async {
+  test('migrates an empty v1 database to v8', () async {
     final oldDatabase = db.AppDatabase.forTesting(
       NativeDatabase.memory(
         setup: (rawDatabase) {
@@ -27,7 +27,7 @@ void main() {
 
     await oldDatabase.customSelect('SELECT 1').get();
 
-    expect(oldDatabase.schemaVersion, 5);
+    expect(oldDatabase.schemaVersion, 8);
     expect(
         oldDatabase.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -39,6 +39,10 @@ void main() {
           'topics',
           'questions',
           'question_topics',
+          'exams',
+          'exam_questions',
+          'resources',
+          'attempts',
         ]));
     await oldDatabase.close();
   });
