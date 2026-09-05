@@ -1,56 +1,77 @@
-// import 'package:flutter/material.dart';
-
-// /// EUEE Prep entry point.
-// ///
-// /// Deliberately minimal at this stage (Milestone 0, Task 4 — project
-// /// skeleton only). Riverpod's ProviderScope and real routing are added in
-// /// Task 6 (routing and state management scaffolding), not here — see
-// /// 10_IMPLEMENTATION_ROADMAP.md.
-// void main() {
-//   runApp(const EueePrepApp());
-// }
-
-// class EueePrepApp extends StatelessWidget {
-//   const EueePrepApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return const MaterialApp(
-//       title: 'EUEE Prep',
-//       home: Scaffold(
-//         body: Center(
-//           child: Text('EUEE Prep — project skeleton'),
-//         ),
-//       ),
-//     );
-//   }
-// }
-// import 'package:flutter/material.dart';
-// import 'features/entitlements/presentation/payment_history_screen.dart';
-
-// void main() {
-//   runApp(const MaterialApp(
-//     home: PaymentHistoryScreen(),
-//     debugShowCheckedModeBanner: false,
-//   ));
-// }
-
-// import 'package:flutter/material.dart';
-// import 'features/subjects/presentation/subject_list_screen.dart';
-
-// void main() {
-//   runApp(const MaterialApp(
-//     home: SubjectListScreen(),
-//     debugShowCheckedModeBanner: false,
-//   ));
-// }
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'core/providers.dart';
+import 'features/settings/presentation/settings_screen.dart';
+import 'features/streams/presentation/onboarding_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 
 void main() {
-  runApp(const MaterialApp(
-    home: SubjectListScreen(),
-    debugShowCheckedModeBanner: false,
-  ));
+  runApp(
+    const ProviderScope(
+      child: EueePrepApp(),
+    ),
+  );
+}
+
+class EueePrepApp extends StatelessWidget {
+  const EueePrepApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'EUEE Prep',
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (_) => const _AppHome(),
+            );
+          case '/settings':
+            return MaterialPageRoute(
+              builder: (_) => const SettingsScreen(),
+            );
+          case '/onboarding':
+            return MaterialPageRoute(
+              builder: (_) => const OnboardingScreen(),
+            );
+          case '/subjects':
+            return MaterialPageRoute(
+              builder: (_) => const SubjectListScreen(),
+            );
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const SubjectListScreen(),
+            );
+        }
+      },
+    );
+  }
+}
+
+/// Routes to OnboardingScreen on first launch (no Preferred Stream),
+/// or to SubjectListScreen when a Preferred Stream has been established.
+class _AppHome extends ConsumerWidget {
+  const _AppHome();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preferredStreamAsync = ref.watch(preferredStreamIdProvider);
+    return preferredStreamAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (streamId) {
+        if (streamId == null) {
+          return const OnboardingScreen();
+        }
+        return const SubjectListScreen();
+      },
+    );
+  }
 }

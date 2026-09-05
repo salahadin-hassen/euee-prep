@@ -1,30 +1,43 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:euee_prep/core/database/app_database.dart' as db;
+import 'package:euee_prep/core/providers.dart';
 import 'package:euee_prep/main.dart';
+import 'package:euee_prep/features/streams/data/local_data_sources/stream_local_data_source.dart';
+import 'package:euee_prep/features/streams/data/repositories/stream_repository_impl.dart';
+import 'package:euee_prep/features/streams/domain/models/stream_model.dart';
+import 'package:euee_prep/features/subjects/data/local_data_sources/subject_local_data_source.dart';
+import 'package:euee_prep/features/subjects/data/repositories/subject_repository_impl.dart';
+import 'package:euee_prep/features/subjects/domain/models/subject.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('EueePrepApp shows EUEE Prep title', (WidgetTester tester) async {
+    final testDb = db.AppDatabase.forTesting(NativeDatabase.memory());
+    // Seed a stream so the subject list works
+    final streamRepo = StreamRepositoryImpl(StreamLocalDataSource(testDb));
+    final subjectRepo = SubjectRepositoryImpl(SubjectLocalDataSource(testDb));
+    await streamRepo.insert(
+      const StreamModel(id: 1, slug: 'natural_science'),
+    );
+    await subjectRepo.insert(
+      const Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+        ],
+        child: const EueePrepApp(),
+      ),
+    );
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('EUEE Prep'), findsOneWidget);
+
+    await testDb.close();
   });
 }
