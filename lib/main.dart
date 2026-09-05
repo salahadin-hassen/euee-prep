@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
+import 'features/streams/domain/models/stream_model.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/streams/presentation/onboarding_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
@@ -51,10 +52,44 @@ class EueePrepApp extends StatelessWidget {
   }
 }
 
+/// Seeds default streams if they don't exist, then returns null.
+final _seedStreamsProvider = FutureProvider<void>((ref) async {
+  final streamRepo = ref.read(streamRepositoryProvider);
+  final streams = await streamRepo.getAll();
+  if (streams.isEmpty) {
+    await streamRepo.insert(
+      const StreamModel(id: 1, slug: 'natural_science'),
+    );
+    await streamRepo.insert(
+      const StreamModel(id: 2, slug: 'social_science'),
+    );
+  }
+});
+
 /// Routes to OnboardingScreen on first launch (no Preferred Stream),
 /// or to SubjectListScreen when a Preferred Stream has been established.
 class _AppHome extends ConsumerWidget {
   const _AppHome();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seedAsync = ref.watch(_seedStreamsProvider);
+    return seedAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (_) => const _AppHomeContent(),
+    );
+  }
+}
+
+/// Routes to OnboardingScreen on first launch (no Preferred Stream),
+/// or to SubjectListScreen when a Preferred Stream has been established.
+class _AppHomeContent extends ConsumerWidget {
+  const _AppHomeContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
