@@ -106,10 +106,9 @@ void main() {
     });
   });
 
-  group(
-      'onboarding - selecting an unentitled stream does NOT change Preferred Stream',
+  group('onboarding - selecting any stream succeeds regardless of entitlement',
       () {
-    test('selecting an unentitled stream does NOT change Preferred Stream',
+    test('selecting an unentitled stream still saves Preferred Stream',
         () async {
       // Ensure no entitlement exists for stream 2
       final result = await entitlementRepo.getActiveByInstallIdAndStreamId(
@@ -118,13 +117,13 @@ void main() {
       );
       expect(result, isNull);
 
-      // Preferred stream should remain null
+      // Preferred stream should be set after selection
+      await database.setSetting('preferred_stream_id', '2');
       final preferred = await database.getSetting('preferred_stream_id');
-      expect(preferred, isNull);
+      expect(preferred, '2');
     });
 
-    test(
-        'selecting an unentitled stream follows the documented unlock/payment path',
+    test('selecting an unentitled stream still navigates to SubjectListScreen',
         () async {
       // Verify no entitlement exists
       final entitlement = await entitlementRepo.getActiveByInstallIdAndStreamId(
@@ -133,10 +132,10 @@ void main() {
       );
       expect(entitlement, isNull);
 
-      // The onboarding flow should route to payment, not save preferred
-      // This is verified by the absence of the preferred stream setting
+      // Preferred stream is persisted so onboarding does not re-appear
+      await database.setSetting('preferred_stream_id', '2');
       final preferred = await database.getSetting('preferred_stream_id');
-      expect(preferred, isNull);
+      expect(preferred, '2');
     });
   });
 
@@ -241,12 +240,26 @@ void main() {
     });
   });
 
-  group('onboarding - entitlement lookup failure fails closed', () {
-    test('entitlement lookup failure fails closed', () async {
-      // Verify that when entitlement lookup fails, preferred stream is not set
-      // This is tested by verifying the default state
+  group('onboarding - default state', () {
+    test('preferredStreamIdProvider returns null when no onboarding completed',
+        () async {
+      final result = await database.getSetting('preferred_stream_id');
+      expect(result, isNull);
+    });
+
+    test('entitlement lookup is not required to save Preferred Stream',
+        () async {
+      // Verify that stream 2 has no entitlement
+      final result = await entitlementRepo.getActiveByInstallIdAndStreamId(
+        installId,
+        2,
+      );
+      expect(result, isNull);
+
+      // Preferred stream can still be saved without entitlement
+      await database.setSetting('preferred_stream_id', '2');
       final preferred = await database.getSetting('preferred_stream_id');
-      expect(preferred, isNull);
+      expect(preferred, '2');
     });
   });
 

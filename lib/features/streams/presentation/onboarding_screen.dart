@@ -6,16 +6,15 @@ import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
 import '../domain/models/stream_model.dart';
-import '../../entitlements/presentation/payment_submission_flow.dart';
 import '../../subjects/presentation/subject_list_screen.dart';
 
 /// Onboarding screen for first-launch Preferred Stream selection.
 ///
 /// Shows Natural Science / Social Science options. The user selects a
-/// stream, and the app checks whether that stream is entitled. If
-/// entitled the selection is persisted as Preferred Stream and the
-/// user proceeds to the Subject List; if not entitled the onboarding
-/// routes to the unlock/payment flow instead of saving the preference.
+/// stream, the selection is persisted as Preferred Stream, and the user
+/// proceeds to the Subject List regardless of entitlement status.
+/// Locked subjects within unentitled streams still require payment,
+/// while entitled subjects are immediately accessible.
 ///
 /// Presentation → Riverpod → Repository → Local Data Source → Drift.
 /// The onboarding screen never queries Drift directly.
@@ -42,57 +41,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final streamId = _selectedStream!.id;
     final navigator = Navigator.of(context);
 
-    // Check whether the selected stream is entitled.
-    bool isEntitled = false;
-    try {
-      final installId = await ref.read(installIdProvider.future);
-      final repo = ref.read(entitlementRepositoryProvider);
-      final entitlement = await repo.getActiveByInstallIdAndStreamId(
-        installId,
-        streamId,
-      );
-      isEntitled = entitlement != null;
-    } catch (_) {
-      // Fail closed: entitlement lookup failure must not allow
-      // protected content to appear accessible.
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to verify entitlement. Please try again.'),
-          backgroundColor: AppColors.colorError,
-        ),
-      );
-      return;
-    }
+    final db = ref.read(databaseProvider);
+    await db.setSetting('preferred_stream_id', streamId.toString());
 
     if (!mounted) return;
-
-    if (isEntitled) {
-      // Persist Preferred Stream.
-      final db = ref.read(databaseProvider);
-      await db.setSetting('preferred_stream_id', streamId.toString());
-
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => const SubjectListScreen()),
-      );
-    } else {
-      // Do NOT save as Preferred Stream. Route to the unlock/payment
-      // flow instead.
-      if (!mounted) return;
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => PaymentSubmissionFlow(
-            streamName: streamDisplayName(_selectedStream!.slug),
-            onFlowComplete: () {
-              if (context.mounted) {
-                navigator.pop();
-                ref.invalidate(preferredStreamIdProvider);
-              }
-            },
-          ),
-        ),
-      );
-    }
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const SubjectListScreen()),
+    );
   }
 
   @override
