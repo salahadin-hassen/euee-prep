@@ -7,7 +7,49 @@ they ship** so malformed or badly-versioned content never reaches a device
 (Decision 021). The app independently re-validates on-device at import time —
 this is the *last line of defense before* that, not a replacement for it.
 
-Pure Python 3.11+, standard library only. No third-party dependencies.
+The deterministic validator remains pure Python 3.11+. The optional AI
+extraction workflow uses the official `google-genai` SDK and PyMuPDF.
+
+## AI extraction workflow
+
+Install the optional dependencies:
+
+```
+python -m pip install -r tools/content_pipeline/requirements-ai.txt
+```
+
+Set credentials only in the shell environment; never commit them:
+
+```
+$env:GEMINI_API_KEY = "..."
+$env:GEMINI_MODEL = "gemini-2.5-flash"
+```
+
+Run the real scanned-paper workflow:
+
+```
+python tools/content_pipeline/ai_extraction.py `
+  --pdf test/fixtures/formal_exam.pdf `
+  --output tools/content_pipeline/output/formal_exam
+```
+
+The runner renders every page, makes one structured extraction request per
+page, validates before verification, and writes artifacts after each page.
+Verification is page-targeted and never rewrites extraction data. Handwritten
+or circled marks are not treated as answer keys. If authoritative answers are
+absent, the output is a blocked candidate because the v2 production contract
+requires `correct_choice_index`.
+
+Generated artifacts are separated into `raw_extraction`,
+`validated_extraction`, `answer_analysis`, `verification`,
+`human_verification`, `human_review`, and a blocked or valid candidate file. A
+run summary records the model and request count without recording credentials.
+
+The answer-analysis stage makes one structured Gemini request per successfully
+validated page, not one request per question. Its `ai_solution` predictions are
+never copied into `correct_choice_index`; only an explicit source answer key or
+separate human verification can support production authoring. Human decisions
+are stored under `human_verification/` without overwriting AI analysis.
 
 ## Validate a pack
 
