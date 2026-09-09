@@ -104,7 +104,8 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             // expanded, others collapsed, until real "most recently
             // studied" data exists.
             initiallyExpanded: section.grade == 12,
-            onChapterTap: (chapter) => _handleChapterTap(chapter, section.grade),
+            onChapterTap: (chapter) =>
+                _handleChapterTap(chapter, section.grade),
           ),
         const SizedBox(height: AppSpacing.spaceLg),
       ],

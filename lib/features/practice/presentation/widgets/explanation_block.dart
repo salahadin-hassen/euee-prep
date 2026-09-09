@@ -45,7 +45,8 @@ class ExplanationBlock extends StatelessWidget {
       padding: const EdgeInsets.only(top: AppSpacing.spaceMd),
       decoration: const BoxDecoration(
         border: Border(
-          top: BorderSide(color: AppColors.colorBorder, width: AppStroke.strokeThin),
+          top: BorderSide(
+              color: AppColors.colorBorder, width: AppStroke.strokeThin),
         ),
       ),
       child: Column(
@@ -56,13 +57,15 @@ class ExplanationBlock extends StatelessWidget {
               Icon(
                 isCorrect ? Icons.check_circle : Icons.cancel,
                 size: AppIconSize.iconSizeMd,
-                color: isCorrect ? AppColors.colorSuccess : AppColors.colorError,
+                color:
+                    isCorrect ? AppColors.colorSuccess : AppColors.colorError,
               ),
               const SizedBox(width: AppSpacing.spaceSm),
               Text(
                 isCorrect ? 'Correct' : 'Incorrect',
                 style: AppTypography.typeHeading3.copyWith(
-                  color: isCorrect ? AppColors.colorSuccess : AppColors.colorError,
+                  color:
+                      isCorrect ? AppColors.colorSuccess : AppColors.colorError,
                 ),
               ),
             ],
@@ -91,7 +94,8 @@ class ExplanationBlock extends StatelessWidget {
               if (notesAvailable)
                 _ResourceLinkChip(label: 'View Notes', onTap: onViewNotes),
               if (flashcardsAvailable)
-                _ResourceLinkChip(label: 'View Flashcards', onTap: onViewFlashcards),
+                _ResourceLinkChip(
+                    label: 'View Flashcards', onTap: onViewFlashcards),
               if (mindMapAvailable)
                 _ResourceLinkChip(label: 'View Mind Map', onTap: onViewMindMap),
             ],
@@ -128,7 +132,8 @@ class _ResourceLinkChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: AppTypography.typeCaption.copyWith(color: AppColors.colorPrimary),
+            style: AppTypography.typeCaption
+                .copyWith(color: AppColors.colorPrimary),
           ),
         ),
       ),

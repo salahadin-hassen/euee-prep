@@ -56,7 +56,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _examTimerCollapsed = false;
 
   Timer? _countdownTicker;
-  late int _remainingSeconds = ExamPacingConfig.sessionTimeSeconds(widget.questions.length);
+  late int _remainingSeconds =
+      ExamPacingConfig.sessionTimeSeconds(widget.questions.length);
   final Stopwatch _sessionStopwatch = Stopwatch()..start();
 
   bool get _timerShouldRun =>
@@ -271,7 +272,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (widget.mode == PracticeMode.exam) {
       timerWidget = PracticeTimer(
         remainingSeconds: _remainingSeconds,
-        totalSeconds: ExamPacingConfig.sessionTimeSeconds(widget.questions.length),
+        totalSeconds:
+            ExamPacingConfig.sessionTimeSeconds(widget.questions.length),
         isCollapsed: _examTimerCollapsed,
         onToggleCollapsed: () =>
             setState(() => _examTimerCollapsed = !_examTimerCollapsed),
@@ -289,7 +291,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
               },
             )
           : IconButton(
-              icon: const Icon(Icons.timer_outlined, color: AppColors.colorTextSecondary),
+              icon: const Icon(Icons.timer_outlined,
+                  color: AppColors.colorTextSecondary),
               tooltip: 'Show timer',
               onPressed: () {
                 setState(() => _practiceTimerOn = true);
@@ -308,8 +311,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
         if (await _handleBackPressed() && mounted) Navigator.of(context).pop();
       },
       timerWidget: timerWidget,
-      isBookmarked:
-          MockBookmarkStore.isBookmarked(widget.questions[_currentIndex].questionId),
+      isBookmarked: MockBookmarkStore.isBookmarked(
+          widget.questions[_currentIndex].questionId),
       onToggleBookmark: _toggleBookmark,
       isCurrentFlagged: _states[_currentIndex].isFlagged,
       onToggleFlag: _toggleFlag,
@@ -368,7 +371,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
             label: 'Previous',
             variant: AppButtonVariant.secondary,
             isFullWidth: true,
-            onPressed: _currentIndex > 0 ? () => _goToIndex(_currentIndex - 1) : null,
+            onPressed:
+                _currentIndex > 0 ? () => _goToIndex(_currentIndex - 1) : null,
           ),
         ),
         const SizedBox(width: AppSpacing.spaceMd),
@@ -376,7 +380,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           child: AppButton(
             label: isLast ? 'Finish' : 'Next',
             isFullWidth: true,
-            onPressed: isLast ? _openReview : () => _goToIndex(_currentIndex + 1),
+            onPressed:
+                isLast ? _openReview : () => _goToIndex(_currentIndex + 1),
           ),
         ),
       ],

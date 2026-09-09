@@ -2,7 +2,6 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:euee_prep/core/database/app_database.dart' as db;
-import 'package:euee_prep/core/providers.dart';
 import 'package:euee_prep/features/entitlements/data/local_data_sources/entitlement_local_data_source.dart';
 import 'package:euee_prep/features/entitlements/data/local_data_sources/install_identity_local_data_source.dart';
 import 'package:euee_prep/features/entitlements/data/repositories/entitlement_repository_impl.dart';
@@ -12,9 +11,6 @@ import 'package:euee_prep/features/entitlements/domain/repositories/install_iden
 import 'package:euee_prep/features/streams/data/local_data_sources/stream_local_data_source.dart';
 import 'package:euee_prep/features/streams/data/repositories/stream_repository_impl.dart';
 import 'package:euee_prep/features/streams/domain/models/stream_model.dart';
-import 'package:euee_prep/features/subjects/data/local_data_sources/subject_local_data_source.dart';
-import 'package:euee_prep/features/subjects/data/repositories/subject_repository_impl.dart';
-import 'package:euee_prep/features/subjects/domain/models/subject.dart';
 
 void main() {
   late db.AppDatabase database;

@@ -3,21 +3,25 @@ import 'package:flutter/material.dart';
 import '../../../../core/design/tokens.dart';
 
 class ScoreCard extends StatelessWidget {
-  const ScoreCard({super.key, required this.correctCount, required this.totalCount});
+  const ScoreCard(
+      {super.key, required this.correctCount, required this.totalCount});
 
   final int correctCount;
   final int totalCount;
 
   @override
   Widget build(BuildContext context) {
-    final accuracy = totalCount == 0 ? 0 : (correctCount / totalCount * 100).round();
+    final accuracy =
+        totalCount == 0 ? 0 : (correctCount / totalCount * 100).round();
     return Column(
       children: [
-        Text('$correctCount / $totalCount correct', style: AppTypography.typeHeading1),
+        Text('$correctCount / $totalCount correct',
+            style: AppTypography.typeHeading1),
         const SizedBox(height: AppSpacing.spaceXs),
-        Text('$accuracy% accuracy', style: AppTypography.typeBody.copyWith(
-          color: AppColors.colorTextSecondary,
-        )),
+        Text('$accuracy% accuracy',
+            style: AppTypography.typeBody.copyWith(
+              color: AppColors.colorTextSecondary,
+            )),
       ],
     );
   }
@@ -52,12 +56,14 @@ class StatisticsCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(entries[i].label, style: AppTypography.typeBody),
-                Text(entries[i].value, style: AppTypography.typeBody.copyWith(
-                  fontWeight: FontWeight.w600,
-                )),
+                Text(entries[i].value,
+                    style: AppTypography.typeBody.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
               ],
             ),
-            if (i != entries.length - 1) const SizedBox(height: AppSpacing.spaceSm),
+            if (i != entries.length - 1)
+              const SizedBox(height: AppSpacing.spaceSm),
           ],
         ],
       ),
@@ -84,7 +90,8 @@ class FocusAreaList extends StatelessWidget {
     if (entries.isEmpty) {
       return Text(
         'No missed topics — nice work.',
-        style: AppTypography.typeBody.copyWith(color: AppColors.colorTextSecondary),
+        style: AppTypography.typeBody
+            .copyWith(color: AppColors.colorTextSecondary),
       );
     }
     return Column(

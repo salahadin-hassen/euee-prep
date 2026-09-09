@@ -68,9 +68,8 @@ class StudyResourceCard extends StatelessWidget {
           Icon(
             config.icon,
             size: AppIconSize.iconSizeLg,
-            color: isAvailable
-                ? AppColors.colorPrimary
-                : AppColors.colorDisabled,
+            color:
+                isAvailable ? AppColors.colorPrimary : AppColors.colorDisabled,
           ),
           const SizedBox(width: AppSpacing.spaceMd),
           Expanded(

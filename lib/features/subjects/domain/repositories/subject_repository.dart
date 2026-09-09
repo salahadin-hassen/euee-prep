@@ -5,5 +5,7 @@ abstract interface class SubjectRepository {
 
   Future<List<Subject>> getAll();
 
+  Future<List<Subject>> getByStreamId(int streamId);
+
   Future<Subject?> getByStreamAndSlug(int streamId, String slug);
 }

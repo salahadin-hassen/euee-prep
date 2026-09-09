@@ -43,7 +43,8 @@ class ExamReviewScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.colorBackground,
         elevation: 0,
-        title: const Text('Review Before Submitting', style: AppTypography.typeHeading3),
+        title: const Text('Review Before Submitting',
+            style: AppTypography.typeHeading3),
       ),
       body: SafeArea(
         child: Padding(
@@ -53,9 +54,11 @@ class ExamReviewScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.timer_outlined, color: AppColors.colorTextSecondary),
+                  const Icon(Icons.timer_outlined,
+                      color: AppColors.colorTextSecondary),
                   const SizedBox(width: AppSpacing.spaceXs),
-                  Text('$_formattedTime remaining', style: AppTypography.typeBody),
+                  Text('$_formattedTime remaining',
+                      style: AppTypography.typeBody),
                 ],
               ),
               const SizedBox(height: AppSpacing.spaceLg),

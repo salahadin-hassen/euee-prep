@@ -110,7 +110,7 @@ void main() {
 
       await oldDatabase.customSelect('SELECT 1').get();
 
-      expect(oldDatabase.schemaVersion, 8);
+      expect(oldDatabase.schemaVersion, 12);
       expect(
         oldDatabase.allTables.map((table) => table.actualTableName),
         contains('attempts'),
@@ -258,7 +258,8 @@ void main() {
       );
     });
 
-    test('is_correct is stored as 0 or 1 (application-level constraint)', () async {
+    test('is_correct is stored as 0 or 1 (application-level constraint)',
+        () async {
       // The CHECK constraint is enforced at the repository layer:
       // Attempt.isCorrect is a bool, and the local data source maps
       // true→1, false→0. Raw integer values outside {0,1} are never
@@ -266,9 +267,11 @@ void main() {
       await repository.insert(_attempt(isCorrect: false));
       await repository.insert(_attempt(id: 2, isCorrect: true));
 
-      final raw = await database.customSelect(
-        'SELECT is_correct FROM attempts ORDER BY id',
-      ).get();
+      final raw = await database
+          .customSelect(
+            'SELECT is_correct FROM attempts ORDER BY id',
+          )
+          .get();
       expect(raw[0].read<int>('is_correct'), 0);
       expect(raw[1].read<int>('is_correct'), 1);
     });

@@ -48,9 +48,12 @@ class QuestionCard extends StatelessWidget {
           : AnswerOptionVisualState.unselected;
     }
     final isCorrectOption = index == question.correctIndex;
-    if (isCorrectOption && selected) return AnswerOptionVisualState.correctSelected;
-    if (isCorrectOption && !selected) return AnswerOptionVisualState.correctUnselected;
-    if (!isCorrectOption && selected) return AnswerOptionVisualState.incorrectSelected;
+    if (isCorrectOption && selected)
+      return AnswerOptionVisualState.correctSelected;
+    if (isCorrectOption && !selected)
+      return AnswerOptionVisualState.correctUnselected;
+    if (!isCorrectOption && selected)
+      return AnswerOptionVisualState.incorrectSelected;
     return AnswerOptionVisualState.unselected;
   }
 

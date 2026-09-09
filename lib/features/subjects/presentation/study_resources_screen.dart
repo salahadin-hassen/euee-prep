@@ -112,7 +112,8 @@ class _StudyResourcesScreenState extends State<StudyResourcesScreen> {
       context: context,
       backgroundColor: AppColors.colorSurface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
       ),
       builder: (context) => SafeArea(
         child: Padding(

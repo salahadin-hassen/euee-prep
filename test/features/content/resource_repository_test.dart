@@ -22,7 +22,7 @@ void main() {
 
     await oldDatabase.customSelect('SELECT 1').get();
 
-    expect(oldDatabase.schemaVersion, 8);
+    expect(oldDatabase.schemaVersion, 12);
     expect(
       oldDatabase.allTables.map((table) => table.actualTableName),
       contains('resources'),

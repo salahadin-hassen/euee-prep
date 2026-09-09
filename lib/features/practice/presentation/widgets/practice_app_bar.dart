@@ -78,14 +78,18 @@ class PracticeAppBar extends StatelessWidget implements PreferredSizeWidget {
             actions: [
               if (mode == PracticeMode.learn || mode == PracticeMode.practice)
                 IconButton(
-                  icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_outline),
+                  icon: Icon(
+                      isBookmarked ? Icons.bookmark : Icons.bookmark_outline),
                   tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
                   onPressed: onToggleBookmark,
                 ),
               if (mode == PracticeMode.exam) ...[
                 IconButton(
-                  icon: Icon(isCurrentFlagged ? Icons.flag : Icons.outlined_flag),
-                  tooltip: isCurrentFlagged ? 'Remove review flag' : 'Mark for review',
+                  icon:
+                      Icon(isCurrentFlagged ? Icons.flag : Icons.outlined_flag),
+                  tooltip: isCurrentFlagged
+                      ? 'Remove review flag'
+                      : 'Mark for review',
                   onPressed: onToggleFlag,
                 ),
                 IconButton(
@@ -118,14 +122,16 @@ class PracticeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 if (mode != PracticeMode.learn) ...[
                   const SizedBox(width: AppSpacing.spaceSm),
                   const Icon(Icons.check_circle_outline,
-                      size: AppIconSize.iconSizeSm, color: AppColors.colorTextSecondary),
+                      size: AppIconSize.iconSizeSm,
+                      color: AppColors.colorTextSecondary),
                   const SizedBox(width: 2),
                   Text('$answeredCount', style: AppTypography.typeCaption),
                 ],
                 if (mode == PracticeMode.exam) ...[
                   const SizedBox(width: AppSpacing.spaceSm),
                   const Icon(Icons.flag_outlined,
-                      size: AppIconSize.iconSizeSm, color: AppColors.colorTextSecondary),
+                      size: AppIconSize.iconSizeSm,
+                      color: AppColors.colorTextSecondary),
                   const SizedBox(width: 2),
                   Text('$flaggedCount', style: AppTypography.typeCaption),
                 ],

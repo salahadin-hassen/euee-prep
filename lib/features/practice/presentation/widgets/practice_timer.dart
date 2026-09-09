@@ -55,11 +55,13 @@ class PracticeTimer extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.spaceXs),
           child: isCollapsed
-              ? Icon(Icons.timer_outlined, color: color, size: AppIconSize.iconSizeMd)
+              ? Icon(Icons.timer_outlined,
+                  color: color, size: AppIconSize.iconSizeMd)
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.timer_outlined, color: color, size: AppIconSize.iconSizeSm),
+                    Icon(Icons.timer_outlined,
+                        color: color, size: AppIconSize.iconSizeSm),
                     const SizedBox(width: AppSpacing.spaceXs),
                     Text(
                       _formatted,

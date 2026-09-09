@@ -23,7 +23,8 @@ class MockStudyResources {
           isAvailable: true,
           count: 8,
         ),
-        StudyResourceUiModel(type: StudyResourceType.mindMap, isAvailable: false),
+        StudyResourceUiModel(
+            type: StudyResourceType.mindMap, isAvailable: false),
       ];
     }
 

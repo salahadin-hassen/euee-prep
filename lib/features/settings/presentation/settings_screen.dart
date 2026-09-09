@@ -252,16 +252,16 @@ void _showStreamPicker(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.spaceMd),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  'Change Preferred Stream',
-                  style: AppTypography.typeHeading3,
+Padding(
+                padding: const EdgeInsets.all(AppSpacing.spaceMd),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Change Preferred Stream',
+                    style: AppTypography.typeHeading3,
+                  ),
                 ),
               ),
-            ),
             ...otherStreams.map((stream) {
               final isEntitled =
                   ref.watch(activeEntitlementForStreamProvider(stream.id)).when(

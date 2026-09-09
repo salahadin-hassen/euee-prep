@@ -25,6 +25,10 @@ part 'app_database.g.dart';
     ExamQuestions,
     Resources,
     Attempts,
+    InstallIdentities,
+    Entitlements,
+    PaymentRequests,
+    Settings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -36,7 +40,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.connection);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,6 +76,21 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.createTable(attempts);
+          }
+          if (from < 9) {
+            await m.createTable(installIdentities);
+            await customStatement(
+              "CREATE UNIQUE INDEX IF NOT EXISTS install_identity_singleton ON install_identities (id) WHERE id = 1",
+            );
+          }
+          if (from < 10) {
+            await m.createTable(entitlements);
+          }
+          if (from < 11) {
+            await m.createTable(paymentRequests);
+          }
+          if (from < 12) {
+            await m.createTable(settings);
           }
         },
       );
@@ -329,10 +348,99 @@ class Attempts extends Table {
   IntColumn get examId => integer().references(Exams, #id).nullable()();
 }
 
+// -- Install identity: singleton row (Decision 032; CHECK(id=1) enforced via migration)
+class InstallIdentities extends Table {
+  IntColumn get id => integer()();
+
+  TextColumn get installId => text().unique()();
+
+  TextColumn get createdAt => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+// -- Entitlement: server-authoritative, cached locally (Decisions 017, 033)
+// Sync direction is server → device only.
+@TableIndex(name: 'idx_entitlements_install', columns: {#installId, #streamId})
+class Entitlements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  TextColumn get installId =>
+      text().references(InstallIdentities, #installId)();
+
+  IntColumn get streamId => integer().references(Streams, #id)();
+
+  TextColumn get status => text()();
+
+  TextColumn get grantedAt => text()();
+
+  TextColumn get revokedAt => text().nullable()();
+
+  TextColumn get sourcePaymentRequestId =>
+      text().nullable().references(PaymentRequests, #requestId)();
+}
+
+// -- PaymentRequest: server-authoritative, cached locally (Decisions 013, 017, 023, 036)
+// request_id is the canonical identifier (Decision 023).
+// Exactly three persisted states: 'pending' | 'verified' | 'rejected' (Decision 036).
+@TableIndex(name: 'idx_payment_requests_install', columns: {#installId})
+class PaymentRequests extends Table {
+  TextColumn get requestId => text()();
+
+  TextColumn get installId =>
+      text().references(InstallIdentities, #installId)();
+
+  IntColumn get streamId => integer().references(Streams, #id)();
+
+  TextColumn get proofType => text()();
+
+  TextColumn get proofValue => text()();
+
+  TextColumn get status => text()();
+
+  TextColumn get rejectionReason => text().nullable()();
+
+  TextColumn get submittedAt => text()();
+
+  TextColumn get verifiedAt => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {requestId};
+}
+
+// -- Settings: simple key-value store for local-only preferences (Decision 017)
+// Install identity is NOT here — it lives in install_identity (Decision 032).
+class Settings extends Table {
+  TextColumn get key => text()();
+
+  TextColumn get value => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File(p.join(directory.path, 'euee_prep.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
+}
+
+/// Minimal settings helpers — reads/writes the local `settings` key-value
+/// table (Decision 017 — local-only, never synced). Kept as free functions
+/// on AppDatabase to avoid a separate feature module for two queries.
+extension SettingsQueries on AppDatabase {
+  Future<String?> getSetting(String key) async {
+    final row = await (select(settings)..where((s) => s.key.equals(key)))
+        .getSingleOrNull();
+    return row?.value;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    await into(settings).insertOnConflictUpdate(
+      SettingsCompanion.insert(key: key, value: value),
+    );
+  }
 }

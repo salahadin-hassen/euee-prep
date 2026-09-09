@@ -27,7 +27,8 @@ Future<int?> showExamNavigator({
     backgroundColor: AppColors.colorSurface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
     ),
     builder: (context) => _ExamNavigatorContent(
       states: states,

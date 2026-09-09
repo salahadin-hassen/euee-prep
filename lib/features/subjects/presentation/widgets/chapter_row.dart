@@ -54,7 +54,8 @@ class ChapterRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(config.icon, size: AppIconSize.iconSizeMd, color: config.color),
+              Icon(config.icon,
+                  size: AppIconSize.iconSizeMd, color: config.color),
               const SizedBox(width: AppSpacing.spaceMd),
               Expanded(
                 child: Text(chapter.title, style: AppTypography.typeBody),

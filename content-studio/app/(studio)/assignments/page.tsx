@@ -1,13 +1,77 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+function friendlyStatus(status: string): string {
+  const map: Record<string, string> = {
+    draft: "Getting started",
+    processing: "Being prepared",
+    in_review: "Being reviewed",
+    blocked: "On hold",
+    ready_for_approval: "Almost done",
+    approved: "All done",
+    exported: "Sent out",
+    archived: "Archived",
+  };
+  return map[status] ?? status;
+}
 
 export default async function AssignmentsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: membershipRows } = await supabase.from("project_members").select("project_id, role, assigned_at").eq("user_id", user.id);
+
+  const { data: membershipRows } = await supabase
+    .from("project_members")
+    .select("project_id, assigned_at")
+    .eq("user_id", user.id);
   const memberships = membershipRows ?? [];
-  return <main className="content"><section className="hero"><div><p className="eyebrow">Reviewer queue</p><h1>My assignments.</h1><p className="lede">Assignment details are scoped to your own account. Question-level work arrives in the next review slice.</p></div></section><section className="panel"><div className="panel-head"><h2>Assigned projects</h2></div>{memberships.length === 0 ? <p className="empty">No assignments are available.</p> : memberships.map((membership) => <div className="project-row" key={membership.project_id}><div><div className="project-title">Project assignment</div><div className="project-meta">Role: {membership.role}</div></div><span className="badge">Assigned</span></div>)}</section></main>;
+  const projectIds = memberships.map((m) => m.project_id);
+
+  const projectResult = projectIds.length === 0
+    ? { data: [] }
+    : await supabase
+        .from("projects")
+        .select("id, title, subject, exam_year, status")
+        .in("id", projectIds)
+        .order("updated_at", { ascending: false });
+  const projects = projectResult.data ?? [];
+
+  return (
+    <main className="content">
+      <section className="hero">
+        <div>
+          <p className="eyebrow">Your papers</p>
+          <h1>Papers you&apos;re helping with</h1>
+          <p className="lede">
+            Click into a paper to start reviewing questions.
+          </p>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Your papers</h2>
+        </div>
+        {projects.length === 0 ? (
+          <p className="empty">No papers to review yet.</p>
+        ) : (
+          projects.map((project) => (
+            <div className="project-row" key={project.id}>
+              <div>
+                <Link className="project-title" href={`/projects/${project.id}`}>
+                  {project.title}
+                </Link>
+                <div className="project-meta">
+                  {project.subject} &middot; EC {project.exam_year}
+                </div>
+              </div>
+              <span className="badge">{friendlyStatus(project.status)}</span>
+            </div>
+          ))
+        )}
+      </section>
+    </main>
+  );
 }

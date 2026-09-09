@@ -64,7 +64,8 @@ class Step3SubmitProof extends StatelessWidget {
             children: [
               if (isOffline) const _OfflineNotice(),
               if (submitError != null) _ErrorBanner(message: submitError!),
-              const Text('Screenshot of payment', style: AppTypography.typeBody),
+              const Text('Screenshot of payment',
+                  style: AppTypography.typeBody),
               const SizedBox(height: AppSpacing.spaceSm),
               ProofUploadField(
                 isAttached: isScreenshotAttached,

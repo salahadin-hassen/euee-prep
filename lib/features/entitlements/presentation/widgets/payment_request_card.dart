@@ -46,8 +46,18 @@ class PaymentRequestCard extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -65,7 +75,8 @@ class PaymentRequestCard extends StatelessWidget {
           color: AppColors.colorSurface,
           borderRadius: BorderRadius.circular(AppRadius.radiusMd),
           border: Border(
-            left: BorderSide(color: _accentColor, width: AppStroke.strokeAccent),
+            left:
+                BorderSide(color: _accentColor, width: AppStroke.strokeAccent),
           ),
           boxShadow: const [
             BoxShadow(

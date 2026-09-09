@@ -49,26 +49,19 @@ void main() {
 
   test('full Physics fixture proves the schema end-to-end', () async {
     // --- Repositories ---
-    final gradeRepo =
-        GradeRepositoryImpl(GradeLocalDataSource(database));
-    final streamRepo =
-        StreamRepositoryImpl(StreamLocalDataSource(database));
-    final subjectRepo =
-        SubjectRepositoryImpl(SubjectLocalDataSource(database));
+    final gradeRepo = GradeRepositoryImpl(GradeLocalDataSource(database));
+    final streamRepo = StreamRepositoryImpl(StreamLocalDataSource(database));
+    final subjectRepo = SubjectRepositoryImpl(SubjectLocalDataSource(database));
     final packRepo =
         ContentPackRepositoryImpl(ContentPackLocalDataSource(database));
-    final chapterRepo =
-        ChapterRepositoryImpl(ChapterLocalDataSource(database));
-    final topicRepo =
-        TopicRepositoryImpl(TopicLocalDataSource(database));
+    final chapterRepo = ChapterRepositoryImpl(ChapterLocalDataSource(database));
+    final topicRepo = TopicRepositoryImpl(TopicLocalDataSource(database));
     final questionRepo =
         QuestionRepositoryImpl(QuestionLocalDataSource(database));
-    final examRepo =
-        ExamRepositoryImpl(ExamLocalDataSource(database));
+    final examRepo = ExamRepositoryImpl(ExamLocalDataSource(database));
     final resourceRepo =
         ResourceRepositoryImpl(ResourceLocalDataSource(database));
-    final attemptRepo =
-        AttemptRepositoryImpl(AttemptLocalDataSource(database));
+    final attemptRepo = AttemptRepositoryImpl(AttemptLocalDataSource(database));
 
     // --- 1. Seed reference data ---
     final grade11 = await gradeRepo.insert(
@@ -349,8 +342,7 @@ void main() {
 
     // --- 9. Verify FK integrity: old pack version's questions remain readable ---
     // (Decision 035 — attempts reference questions by stable identity)
-    final q1Again =
-        (await questionRepo.getAll()).firstWhere((q) => q.id == 1);
+    final q1Again = (await questionRepo.getAll()).firstWhere((q) => q.id == 1);
     expect(q1Again.prompt, contains('5kg'));
 
     // --- 10. Verify pack version lookup ---
@@ -362,8 +354,7 @@ void main() {
     // --- 11. Verify no updated_at/is_deleted on attempts ---
     final columns =
         await database.customSelect('PRAGMA table_info(attempts)').get();
-    final columnNames =
-        columns.map((row) => row.read<String>('name')).toSet();
+    final columnNames = columns.map((row) => row.read<String>('name')).toSet();
     expect(columnNames, isNot(contains('updated_at')));
     expect(columnNames, isNot(contains('is_deleted')));
 
@@ -371,8 +362,7 @@ void main() {
     final indexes = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type='index'")
         .get();
-    final indexNames =
-        indexes.map((row) => row.read<String>('name')).toSet();
+    final indexNames = indexes.map((row) => row.read<String>('name')).toSet();
     expect(indexNames, contains('idx_attempts_question_id'));
     expect(indexNames, contains('idx_attempts_attempted_at'));
     expect(indexNames, contains('idx_attempts_subject_id'));

@@ -30,7 +30,8 @@ class PaymentHistoryScreen extends StatefulWidget {
 
 class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   bool _isLoading = true;
-  final bool _isOffline = false; // TODO(integration): drive from real connectivity state.
+  final bool _isOffline =
+      false; // TODO(integration): drive from real connectivity state.
   List<PaymentRequestUiModel> _requests = const [];
 
   @override
@@ -177,7 +178,8 @@ class _OfflineBanner extends StatelessWidget {
       ),
       child: Text(
         "You're offline — showing last known status.",
-        style: AppTypography.typeCaption.copyWith(color: AppColors.colorWarning),
+        style:
+            AppTypography.typeCaption.copyWith(color: AppColors.colorWarning),
       ),
     );
   }

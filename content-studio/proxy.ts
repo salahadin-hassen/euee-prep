@@ -26,9 +26,13 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isProtected = request.nextUrl.pathname.startsWith("/admin") ||
-    request.nextUrl.pathname.startsWith("/reviewer") ||
-    request.nextUrl.pathname === "/dashboard";
+  const pathname = request.nextUrl.pathname;
+  const isProtected =
+    pathname === "/dashboard" ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/reviewer") ||
+    pathname.startsWith("/projects") ||
+    pathname.startsWith("/assignments");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -37,7 +41,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && request.nextUrl.pathname === "/login") {
+  if (user && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

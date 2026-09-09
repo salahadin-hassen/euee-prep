@@ -40,16 +40,27 @@ class _PaymentSubmissionFlowState extends State<PaymentSubmissionFlow> {
   bool _isScreenshotAttached = false;
   final _transactionIdController = TextEditingController();
 
-  final bool _isOffline = false; // TODO(integration): drive from real connectivity state.
+  final bool _isOffline =
+      false; // TODO(integration): drive from real connectivity state.
   String? _submitError;
   String? _submittedRequestId;
 
   static const _subjectsByStream = {
     'Natural Science': [
-      'English', 'Mathematics', 'SAT (Aptitude)', 'Physics', 'Chemistry', 'Biology',
+      'English',
+      'Mathematics',
+      'SAT (Aptitude)',
+      'Physics',
+      'Chemistry',
+      'Biology',
     ],
     'Social Science': [
-      'English', 'Mathematics', 'SAT (Aptitude)', 'Geography', 'History', 'Economics',
+      'English',
+      'Mathematics',
+      'SAT (Aptitude)',
+      'Geography',
+      'History',
+      'Economics',
     ],
   };
 
@@ -97,13 +108,15 @@ class _PaymentSubmissionFlowState extends State<PaymentSubmissionFlow> {
 
     // TODO(integration): replace with a real submission call. Simulated
     // here so the confirmation step is reachable and reviewable.
-    if (_isOffline) return; // step screen already blocks this via disabled button
+    if (_isOffline)
+      return; // step screen already blocks this via disabled button
 
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() {
-      _submittedRequestId = 'EP-${DateTime.now().millisecondsSinceEpoch % 10000}';
+      _submittedRequestId =
+          'EP-${DateTime.now().millisecondsSinceEpoch % 10000}';
       _currentStep = 4;
     });
   }

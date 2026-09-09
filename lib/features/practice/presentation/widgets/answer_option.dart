@@ -63,7 +63,8 @@ class AnswerOption extends StatelessWidget {
       AnswerOptionVisualState.selected => '$base, selected.',
       AnswerOptionVisualState.correctSelected =>
         '$base, selected, correct answer.',
-      AnswerOptionVisualState.incorrectSelected => '$base, selected, incorrect.',
+      AnswerOptionVisualState.incorrectSelected =>
+        '$base, selected, incorrect.',
       AnswerOptionVisualState.correctUnselected => '$base, correct answer.',
     };
   }
@@ -91,7 +92,8 @@ class AnswerOption extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(visual.icon, size: AppIconSize.iconSizeMd, color: visual.color),
+              Icon(visual.icon,
+                  size: AppIconSize.iconSizeMd, color: visual.color),
               const SizedBox(width: AppSpacing.spaceMd),
               Expanded(
                 child: Text(

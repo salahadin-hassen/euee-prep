@@ -115,9 +115,12 @@ class SessionSummaryScreen extends StatelessWidget {
 
     final statEntries = <StatEntry>[
       if (mode == PracticeMode.exam && timeRemainingSeconds != null)
-        StatEntry(label: 'Time Remaining', value: _formatDuration(timeRemainingSeconds!))
+        StatEntry(
+            label: 'Time Remaining',
+            value: _formatDuration(timeRemainingSeconds!))
       else
-        StatEntry(label: 'Average Time per Question', value: '${avgTimeSeconds}s'),
+        StatEntry(
+            label: 'Average Time per Question', value: '${avgTimeSeconds}s'),
       StatEntry(label: 'Total Time', value: _formatDuration(totalTimeSeconds)),
       StatEntry(label: 'Strongest Topic', value: strongest),
       StatEntry(label: 'Weakest Topic', value: weakest),
@@ -131,7 +134,8 @@ class SessionSummaryScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: AppSpacing.spaceLg),
-              ScoreCard(correctCount: _correctCount, totalCount: questions.length),
+              ScoreCard(
+                  correctCount: _correctCount, totalCount: questions.length),
               const SizedBox(height: AppSpacing.spaceLg),
               StatisticsCard(entries: statEntries),
               const SizedBox(height: AppSpacing.spaceLg),

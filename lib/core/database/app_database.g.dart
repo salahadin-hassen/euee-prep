@@ -4334,6 +4334,1303 @@ class AttemptsCompanion extends UpdateCompanion<Attempt> {
   }
 }
 
+class $InstallIdentitiesTable extends InstallIdentities
+    with TableInfo<$InstallIdentitiesTable, InstallIdentity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InstallIdentitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _installIdMeta =
+      const VerificationMeta('installId');
+  @override
+  late final GeneratedColumn<String> installId = GeneratedColumn<String>(
+      'install_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, installId, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'install_identities';
+  @override
+  VerificationContext validateIntegrity(Insertable<InstallIdentity> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('install_id')) {
+      context.handle(_installIdMeta,
+          installId.isAcceptableOrUnknown(data['install_id']!, _installIdMeta));
+    } else if (isInserting) {
+      context.missing(_installIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InstallIdentity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InstallIdentity(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      installId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}install_id'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $InstallIdentitiesTable createAlias(String alias) {
+    return $InstallIdentitiesTable(attachedDatabase, alias);
+  }
+}
+
+class InstallIdentity extends DataClass implements Insertable<InstallIdentity> {
+  final int id;
+  final String installId;
+  final String createdAt;
+  const InstallIdentity(
+      {required this.id, required this.installId, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['install_id'] = Variable<String>(installId);
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  InstallIdentitiesCompanion toCompanion(bool nullToAbsent) {
+    return InstallIdentitiesCompanion(
+      id: Value(id),
+      installId: Value(installId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory InstallIdentity.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InstallIdentity(
+      id: serializer.fromJson<int>(json['id']),
+      installId: serializer.fromJson<String>(json['installId']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'installId': serializer.toJson<String>(installId),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  InstallIdentity copyWith({int? id, String? installId, String? createdAt}) =>
+      InstallIdentity(
+        id: id ?? this.id,
+        installId: installId ?? this.installId,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  InstallIdentity copyWithCompanion(InstallIdentitiesCompanion data) {
+    return InstallIdentity(
+      id: data.id.present ? data.id.value : this.id,
+      installId: data.installId.present ? data.installId.value : this.installId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InstallIdentity(')
+          ..write('id: $id, ')
+          ..write('installId: $installId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, installId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InstallIdentity &&
+          other.id == this.id &&
+          other.installId == this.installId &&
+          other.createdAt == this.createdAt);
+}
+
+class InstallIdentitiesCompanion extends UpdateCompanion<InstallIdentity> {
+  final Value<int> id;
+  final Value<String> installId;
+  final Value<String> createdAt;
+  const InstallIdentitiesCompanion({
+    this.id = const Value.absent(),
+    this.installId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  InstallIdentitiesCompanion.insert({
+    this.id = const Value.absent(),
+    required String installId,
+    required String createdAt,
+  })  : installId = Value(installId),
+        createdAt = Value(createdAt);
+  static Insertable<InstallIdentity> custom({
+    Expression<int>? id,
+    Expression<String>? installId,
+    Expression<String>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (installId != null) 'install_id': installId,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  InstallIdentitiesCompanion copyWith(
+      {Value<int>? id, Value<String>? installId, Value<String>? createdAt}) {
+    return InstallIdentitiesCompanion(
+      id: id ?? this.id,
+      installId: installId ?? this.installId,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (installId.present) {
+      map['install_id'] = Variable<String>(installId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InstallIdentitiesCompanion(')
+          ..write('id: $id, ')
+          ..write('installId: $installId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PaymentRequestsTable extends PaymentRequests
+    with TableInfo<$PaymentRequestsTable, PaymentRequest> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PaymentRequestsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _requestIdMeta =
+      const VerificationMeta('requestId');
+  @override
+  late final GeneratedColumn<String> requestId = GeneratedColumn<String>(
+      'request_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _installIdMeta =
+      const VerificationMeta('installId');
+  @override
+  late final GeneratedColumn<String> installId = GeneratedColumn<String>(
+      'install_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES install_identities (install_id)'));
+  static const VerificationMeta _streamIdMeta =
+      const VerificationMeta('streamId');
+  @override
+  late final GeneratedColumn<int> streamId = GeneratedColumn<int>(
+      'stream_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES streams (id)'));
+  static const VerificationMeta _proofTypeMeta =
+      const VerificationMeta('proofType');
+  @override
+  late final GeneratedColumn<String> proofType = GeneratedColumn<String>(
+      'proof_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _proofValueMeta =
+      const VerificationMeta('proofValue');
+  @override
+  late final GeneratedColumn<String> proofValue = GeneratedColumn<String>(
+      'proof_value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _rejectionReasonMeta =
+      const VerificationMeta('rejectionReason');
+  @override
+  late final GeneratedColumn<String> rejectionReason = GeneratedColumn<String>(
+      'rejection_reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _submittedAtMeta =
+      const VerificationMeta('submittedAt');
+  @override
+  late final GeneratedColumn<String> submittedAt = GeneratedColumn<String>(
+      'submitted_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _verifiedAtMeta =
+      const VerificationMeta('verifiedAt');
+  @override
+  late final GeneratedColumn<String> verifiedAt = GeneratedColumn<String>(
+      'verified_at', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        requestId,
+        installId,
+        streamId,
+        proofType,
+        proofValue,
+        status,
+        rejectionReason,
+        submittedAt,
+        verifiedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'payment_requests';
+  @override
+  VerificationContext validateIntegrity(Insertable<PaymentRequest> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('request_id')) {
+      context.handle(_requestIdMeta,
+          requestId.isAcceptableOrUnknown(data['request_id']!, _requestIdMeta));
+    } else if (isInserting) {
+      context.missing(_requestIdMeta);
+    }
+    if (data.containsKey('install_id')) {
+      context.handle(_installIdMeta,
+          installId.isAcceptableOrUnknown(data['install_id']!, _installIdMeta));
+    } else if (isInserting) {
+      context.missing(_installIdMeta);
+    }
+    if (data.containsKey('stream_id')) {
+      context.handle(_streamIdMeta,
+          streamId.isAcceptableOrUnknown(data['stream_id']!, _streamIdMeta));
+    } else if (isInserting) {
+      context.missing(_streamIdMeta);
+    }
+    if (data.containsKey('proof_type')) {
+      context.handle(_proofTypeMeta,
+          proofType.isAcceptableOrUnknown(data['proof_type']!, _proofTypeMeta));
+    } else if (isInserting) {
+      context.missing(_proofTypeMeta);
+    }
+    if (data.containsKey('proof_value')) {
+      context.handle(
+          _proofValueMeta,
+          proofValue.isAcceptableOrUnknown(
+              data['proof_value']!, _proofValueMeta));
+    } else if (isInserting) {
+      context.missing(_proofValueMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('rejection_reason')) {
+      context.handle(
+          _rejectionReasonMeta,
+          rejectionReason.isAcceptableOrUnknown(
+              data['rejection_reason']!, _rejectionReasonMeta));
+    }
+    if (data.containsKey('submitted_at')) {
+      context.handle(
+          _submittedAtMeta,
+          submittedAt.isAcceptableOrUnknown(
+              data['submitted_at']!, _submittedAtMeta));
+    } else if (isInserting) {
+      context.missing(_submittedAtMeta);
+    }
+    if (data.containsKey('verified_at')) {
+      context.handle(
+          _verifiedAtMeta,
+          verifiedAt.isAcceptableOrUnknown(
+              data['verified_at']!, _verifiedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {requestId};
+  @override
+  PaymentRequest map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PaymentRequest(
+      requestId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}request_id'])!,
+      installId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}install_id'])!,
+      streamId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}stream_id'])!,
+      proofType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}proof_type'])!,
+      proofValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}proof_value'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      rejectionReason: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}rejection_reason']),
+      submittedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}submitted_at'])!,
+      verifiedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}verified_at']),
+    );
+  }
+
+  @override
+  $PaymentRequestsTable createAlias(String alias) {
+    return $PaymentRequestsTable(attachedDatabase, alias);
+  }
+}
+
+class PaymentRequest extends DataClass implements Insertable<PaymentRequest> {
+  final String requestId;
+  final String installId;
+  final int streamId;
+  final String proofType;
+  final String proofValue;
+  final String status;
+  final String? rejectionReason;
+  final String submittedAt;
+  final String? verifiedAt;
+  const PaymentRequest(
+      {required this.requestId,
+      required this.installId,
+      required this.streamId,
+      required this.proofType,
+      required this.proofValue,
+      required this.status,
+      this.rejectionReason,
+      required this.submittedAt,
+      this.verifiedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['request_id'] = Variable<String>(requestId);
+    map['install_id'] = Variable<String>(installId);
+    map['stream_id'] = Variable<int>(streamId);
+    map['proof_type'] = Variable<String>(proofType);
+    map['proof_value'] = Variable<String>(proofValue);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || rejectionReason != null) {
+      map['rejection_reason'] = Variable<String>(rejectionReason);
+    }
+    map['submitted_at'] = Variable<String>(submittedAt);
+    if (!nullToAbsent || verifiedAt != null) {
+      map['verified_at'] = Variable<String>(verifiedAt);
+    }
+    return map;
+  }
+
+  PaymentRequestsCompanion toCompanion(bool nullToAbsent) {
+    return PaymentRequestsCompanion(
+      requestId: Value(requestId),
+      installId: Value(installId),
+      streamId: Value(streamId),
+      proofType: Value(proofType),
+      proofValue: Value(proofValue),
+      status: Value(status),
+      rejectionReason: rejectionReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rejectionReason),
+      submittedAt: Value(submittedAt),
+      verifiedAt: verifiedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedAt),
+    );
+  }
+
+  factory PaymentRequest.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PaymentRequest(
+      requestId: serializer.fromJson<String>(json['requestId']),
+      installId: serializer.fromJson<String>(json['installId']),
+      streamId: serializer.fromJson<int>(json['streamId']),
+      proofType: serializer.fromJson<String>(json['proofType']),
+      proofValue: serializer.fromJson<String>(json['proofValue']),
+      status: serializer.fromJson<String>(json['status']),
+      rejectionReason: serializer.fromJson<String?>(json['rejectionReason']),
+      submittedAt: serializer.fromJson<String>(json['submittedAt']),
+      verifiedAt: serializer.fromJson<String?>(json['verifiedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'requestId': serializer.toJson<String>(requestId),
+      'installId': serializer.toJson<String>(installId),
+      'streamId': serializer.toJson<int>(streamId),
+      'proofType': serializer.toJson<String>(proofType),
+      'proofValue': serializer.toJson<String>(proofValue),
+      'status': serializer.toJson<String>(status),
+      'rejectionReason': serializer.toJson<String?>(rejectionReason),
+      'submittedAt': serializer.toJson<String>(submittedAt),
+      'verifiedAt': serializer.toJson<String?>(verifiedAt),
+    };
+  }
+
+  PaymentRequest copyWith(
+          {String? requestId,
+          String? installId,
+          int? streamId,
+          String? proofType,
+          String? proofValue,
+          String? status,
+          Value<String?> rejectionReason = const Value.absent(),
+          String? submittedAt,
+          Value<String?> verifiedAt = const Value.absent()}) =>
+      PaymentRequest(
+        requestId: requestId ?? this.requestId,
+        installId: installId ?? this.installId,
+        streamId: streamId ?? this.streamId,
+        proofType: proofType ?? this.proofType,
+        proofValue: proofValue ?? this.proofValue,
+        status: status ?? this.status,
+        rejectionReason: rejectionReason.present
+            ? rejectionReason.value
+            : this.rejectionReason,
+        submittedAt: submittedAt ?? this.submittedAt,
+        verifiedAt: verifiedAt.present ? verifiedAt.value : this.verifiedAt,
+      );
+  PaymentRequest copyWithCompanion(PaymentRequestsCompanion data) {
+    return PaymentRequest(
+      requestId: data.requestId.present ? data.requestId.value : this.requestId,
+      installId: data.installId.present ? data.installId.value : this.installId,
+      streamId: data.streamId.present ? data.streamId.value : this.streamId,
+      proofType: data.proofType.present ? data.proofType.value : this.proofType,
+      proofValue:
+          data.proofValue.present ? data.proofValue.value : this.proofValue,
+      status: data.status.present ? data.status.value : this.status,
+      rejectionReason: data.rejectionReason.present
+          ? data.rejectionReason.value
+          : this.rejectionReason,
+      submittedAt:
+          data.submittedAt.present ? data.submittedAt.value : this.submittedAt,
+      verifiedAt:
+          data.verifiedAt.present ? data.verifiedAt.value : this.verifiedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaymentRequest(')
+          ..write('requestId: $requestId, ')
+          ..write('installId: $installId, ')
+          ..write('streamId: $streamId, ')
+          ..write('proofType: $proofType, ')
+          ..write('proofValue: $proofValue, ')
+          ..write('status: $status, ')
+          ..write('rejectionReason: $rejectionReason, ')
+          ..write('submittedAt: $submittedAt, ')
+          ..write('verifiedAt: $verifiedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(requestId, installId, streamId, proofType,
+      proofValue, status, rejectionReason, submittedAt, verifiedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PaymentRequest &&
+          other.requestId == this.requestId &&
+          other.installId == this.installId &&
+          other.streamId == this.streamId &&
+          other.proofType == this.proofType &&
+          other.proofValue == this.proofValue &&
+          other.status == this.status &&
+          other.rejectionReason == this.rejectionReason &&
+          other.submittedAt == this.submittedAt &&
+          other.verifiedAt == this.verifiedAt);
+}
+
+class PaymentRequestsCompanion extends UpdateCompanion<PaymentRequest> {
+  final Value<String> requestId;
+  final Value<String> installId;
+  final Value<int> streamId;
+  final Value<String> proofType;
+  final Value<String> proofValue;
+  final Value<String> status;
+  final Value<String?> rejectionReason;
+  final Value<String> submittedAt;
+  final Value<String?> verifiedAt;
+  final Value<int> rowid;
+  const PaymentRequestsCompanion({
+    this.requestId = const Value.absent(),
+    this.installId = const Value.absent(),
+    this.streamId = const Value.absent(),
+    this.proofType = const Value.absent(),
+    this.proofValue = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rejectionReason = const Value.absent(),
+    this.submittedAt = const Value.absent(),
+    this.verifiedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PaymentRequestsCompanion.insert({
+    required String requestId,
+    required String installId,
+    required int streamId,
+    required String proofType,
+    required String proofValue,
+    required String status,
+    this.rejectionReason = const Value.absent(),
+    required String submittedAt,
+    this.verifiedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : requestId = Value(requestId),
+        installId = Value(installId),
+        streamId = Value(streamId),
+        proofType = Value(proofType),
+        proofValue = Value(proofValue),
+        status = Value(status),
+        submittedAt = Value(submittedAt);
+  static Insertable<PaymentRequest> custom({
+    Expression<String>? requestId,
+    Expression<String>? installId,
+    Expression<int>? streamId,
+    Expression<String>? proofType,
+    Expression<String>? proofValue,
+    Expression<String>? status,
+    Expression<String>? rejectionReason,
+    Expression<String>? submittedAt,
+    Expression<String>? verifiedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (requestId != null) 'request_id': requestId,
+      if (installId != null) 'install_id': installId,
+      if (streamId != null) 'stream_id': streamId,
+      if (proofType != null) 'proof_type': proofType,
+      if (proofValue != null) 'proof_value': proofValue,
+      if (status != null) 'status': status,
+      if (rejectionReason != null) 'rejection_reason': rejectionReason,
+      if (submittedAt != null) 'submitted_at': submittedAt,
+      if (verifiedAt != null) 'verified_at': verifiedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PaymentRequestsCompanion copyWith(
+      {Value<String>? requestId,
+      Value<String>? installId,
+      Value<int>? streamId,
+      Value<String>? proofType,
+      Value<String>? proofValue,
+      Value<String>? status,
+      Value<String?>? rejectionReason,
+      Value<String>? submittedAt,
+      Value<String?>? verifiedAt,
+      Value<int>? rowid}) {
+    return PaymentRequestsCompanion(
+      requestId: requestId ?? this.requestId,
+      installId: installId ?? this.installId,
+      streamId: streamId ?? this.streamId,
+      proofType: proofType ?? this.proofType,
+      proofValue: proofValue ?? this.proofValue,
+      status: status ?? this.status,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      submittedAt: submittedAt ?? this.submittedAt,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (requestId.present) {
+      map['request_id'] = Variable<String>(requestId.value);
+    }
+    if (installId.present) {
+      map['install_id'] = Variable<String>(installId.value);
+    }
+    if (streamId.present) {
+      map['stream_id'] = Variable<int>(streamId.value);
+    }
+    if (proofType.present) {
+      map['proof_type'] = Variable<String>(proofType.value);
+    }
+    if (proofValue.present) {
+      map['proof_value'] = Variable<String>(proofValue.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (rejectionReason.present) {
+      map['rejection_reason'] = Variable<String>(rejectionReason.value);
+    }
+    if (submittedAt.present) {
+      map['submitted_at'] = Variable<String>(submittedAt.value);
+    }
+    if (verifiedAt.present) {
+      map['verified_at'] = Variable<String>(verifiedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaymentRequestsCompanion(')
+          ..write('requestId: $requestId, ')
+          ..write('installId: $installId, ')
+          ..write('streamId: $streamId, ')
+          ..write('proofType: $proofType, ')
+          ..write('proofValue: $proofValue, ')
+          ..write('status: $status, ')
+          ..write('rejectionReason: $rejectionReason, ')
+          ..write('submittedAt: $submittedAt, ')
+          ..write('verifiedAt: $verifiedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntitlementsTable extends Entitlements
+    with TableInfo<$EntitlementsTable, Entitlement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntitlementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _installIdMeta =
+      const VerificationMeta('installId');
+  @override
+  late final GeneratedColumn<String> installId = GeneratedColumn<String>(
+      'install_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES install_identities (install_id)'));
+  static const VerificationMeta _streamIdMeta =
+      const VerificationMeta('streamId');
+  @override
+  late final GeneratedColumn<int> streamId = GeneratedColumn<int>(
+      'stream_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES streams (id)'));
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _grantedAtMeta =
+      const VerificationMeta('grantedAt');
+  @override
+  late final GeneratedColumn<String> grantedAt = GeneratedColumn<String>(
+      'granted_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _revokedAtMeta =
+      const VerificationMeta('revokedAt');
+  @override
+  late final GeneratedColumn<String> revokedAt = GeneratedColumn<String>(
+      'revoked_at', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sourcePaymentRequestIdMeta =
+      const VerificationMeta('sourcePaymentRequestId');
+  @override
+  late final GeneratedColumn<String> sourcePaymentRequestId =
+      GeneratedColumn<String>('source_payment_request_id', aliasedName, true,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultConstraints: GeneratedColumn.constraintIsAlways(
+              'REFERENCES payment_requests (request_id)'));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        installId,
+        streamId,
+        status,
+        grantedAt,
+        revokedAt,
+        sourcePaymentRequestId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entitlements';
+  @override
+  VerificationContext validateIntegrity(Insertable<Entitlement> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('install_id')) {
+      context.handle(_installIdMeta,
+          installId.isAcceptableOrUnknown(data['install_id']!, _installIdMeta));
+    } else if (isInserting) {
+      context.missing(_installIdMeta);
+    }
+    if (data.containsKey('stream_id')) {
+      context.handle(_streamIdMeta,
+          streamId.isAcceptableOrUnknown(data['stream_id']!, _streamIdMeta));
+    } else if (isInserting) {
+      context.missing(_streamIdMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('granted_at')) {
+      context.handle(_grantedAtMeta,
+          grantedAt.isAcceptableOrUnknown(data['granted_at']!, _grantedAtMeta));
+    } else if (isInserting) {
+      context.missing(_grantedAtMeta);
+    }
+    if (data.containsKey('revoked_at')) {
+      context.handle(_revokedAtMeta,
+          revokedAt.isAcceptableOrUnknown(data['revoked_at']!, _revokedAtMeta));
+    }
+    if (data.containsKey('source_payment_request_id')) {
+      context.handle(
+          _sourcePaymentRequestIdMeta,
+          sourcePaymentRequestId.isAcceptableOrUnknown(
+              data['source_payment_request_id']!, _sourcePaymentRequestIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Entitlement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Entitlement(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      installId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}install_id'])!,
+      streamId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}stream_id'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      grantedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}granted_at'])!,
+      revokedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}revoked_at']),
+      sourcePaymentRequestId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}source_payment_request_id']),
+    );
+  }
+
+  @override
+  $EntitlementsTable createAlias(String alias) {
+    return $EntitlementsTable(attachedDatabase, alias);
+  }
+}
+
+class Entitlement extends DataClass implements Insertable<Entitlement> {
+  final int id;
+  final String installId;
+  final int streamId;
+  final String status;
+  final String grantedAt;
+  final String? revokedAt;
+  final String? sourcePaymentRequestId;
+  const Entitlement(
+      {required this.id,
+      required this.installId,
+      required this.streamId,
+      required this.status,
+      required this.grantedAt,
+      this.revokedAt,
+      this.sourcePaymentRequestId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['install_id'] = Variable<String>(installId);
+    map['stream_id'] = Variable<int>(streamId);
+    map['status'] = Variable<String>(status);
+    map['granted_at'] = Variable<String>(grantedAt);
+    if (!nullToAbsent || revokedAt != null) {
+      map['revoked_at'] = Variable<String>(revokedAt);
+    }
+    if (!nullToAbsent || sourcePaymentRequestId != null) {
+      map['source_payment_request_id'] =
+          Variable<String>(sourcePaymentRequestId);
+    }
+    return map;
+  }
+
+  EntitlementsCompanion toCompanion(bool nullToAbsent) {
+    return EntitlementsCompanion(
+      id: Value(id),
+      installId: Value(installId),
+      streamId: Value(streamId),
+      status: Value(status),
+      grantedAt: Value(grantedAt),
+      revokedAt: revokedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revokedAt),
+      sourcePaymentRequestId: sourcePaymentRequestId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourcePaymentRequestId),
+    );
+  }
+
+  factory Entitlement.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Entitlement(
+      id: serializer.fromJson<int>(json['id']),
+      installId: serializer.fromJson<String>(json['installId']),
+      streamId: serializer.fromJson<int>(json['streamId']),
+      status: serializer.fromJson<String>(json['status']),
+      grantedAt: serializer.fromJson<String>(json['grantedAt']),
+      revokedAt: serializer.fromJson<String?>(json['revokedAt']),
+      sourcePaymentRequestId:
+          serializer.fromJson<String?>(json['sourcePaymentRequestId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'installId': serializer.toJson<String>(installId),
+      'streamId': serializer.toJson<int>(streamId),
+      'status': serializer.toJson<String>(status),
+      'grantedAt': serializer.toJson<String>(grantedAt),
+      'revokedAt': serializer.toJson<String?>(revokedAt),
+      'sourcePaymentRequestId':
+          serializer.toJson<String?>(sourcePaymentRequestId),
+    };
+  }
+
+  Entitlement copyWith(
+          {int? id,
+          String? installId,
+          int? streamId,
+          String? status,
+          String? grantedAt,
+          Value<String?> revokedAt = const Value.absent(),
+          Value<String?> sourcePaymentRequestId = const Value.absent()}) =>
+      Entitlement(
+        id: id ?? this.id,
+        installId: installId ?? this.installId,
+        streamId: streamId ?? this.streamId,
+        status: status ?? this.status,
+        grantedAt: grantedAt ?? this.grantedAt,
+        revokedAt: revokedAt.present ? revokedAt.value : this.revokedAt,
+        sourcePaymentRequestId: sourcePaymentRequestId.present
+            ? sourcePaymentRequestId.value
+            : this.sourcePaymentRequestId,
+      );
+  Entitlement copyWithCompanion(EntitlementsCompanion data) {
+    return Entitlement(
+      id: data.id.present ? data.id.value : this.id,
+      installId: data.installId.present ? data.installId.value : this.installId,
+      streamId: data.streamId.present ? data.streamId.value : this.streamId,
+      status: data.status.present ? data.status.value : this.status,
+      grantedAt: data.grantedAt.present ? data.grantedAt.value : this.grantedAt,
+      revokedAt: data.revokedAt.present ? data.revokedAt.value : this.revokedAt,
+      sourcePaymentRequestId: data.sourcePaymentRequestId.present
+          ? data.sourcePaymentRequestId.value
+          : this.sourcePaymentRequestId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Entitlement(')
+          ..write('id: $id, ')
+          ..write('installId: $installId, ')
+          ..write('streamId: $streamId, ')
+          ..write('status: $status, ')
+          ..write('grantedAt: $grantedAt, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('sourcePaymentRequestId: $sourcePaymentRequestId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, installId, streamId, status, grantedAt,
+      revokedAt, sourcePaymentRequestId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Entitlement &&
+          other.id == this.id &&
+          other.installId == this.installId &&
+          other.streamId == this.streamId &&
+          other.status == this.status &&
+          other.grantedAt == this.grantedAt &&
+          other.revokedAt == this.revokedAt &&
+          other.sourcePaymentRequestId == this.sourcePaymentRequestId);
+}
+
+class EntitlementsCompanion extends UpdateCompanion<Entitlement> {
+  final Value<int> id;
+  final Value<String> installId;
+  final Value<int> streamId;
+  final Value<String> status;
+  final Value<String> grantedAt;
+  final Value<String?> revokedAt;
+  final Value<String?> sourcePaymentRequestId;
+  const EntitlementsCompanion({
+    this.id = const Value.absent(),
+    this.installId = const Value.absent(),
+    this.streamId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.grantedAt = const Value.absent(),
+    this.revokedAt = const Value.absent(),
+    this.sourcePaymentRequestId = const Value.absent(),
+  });
+  EntitlementsCompanion.insert({
+    this.id = const Value.absent(),
+    required String installId,
+    required int streamId,
+    required String status,
+    required String grantedAt,
+    this.revokedAt = const Value.absent(),
+    this.sourcePaymentRequestId = const Value.absent(),
+  })  : installId = Value(installId),
+        streamId = Value(streamId),
+        status = Value(status),
+        grantedAt = Value(grantedAt);
+  static Insertable<Entitlement> custom({
+    Expression<int>? id,
+    Expression<String>? installId,
+    Expression<int>? streamId,
+    Expression<String>? status,
+    Expression<String>? grantedAt,
+    Expression<String>? revokedAt,
+    Expression<String>? sourcePaymentRequestId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (installId != null) 'install_id': installId,
+      if (streamId != null) 'stream_id': streamId,
+      if (status != null) 'status': status,
+      if (grantedAt != null) 'granted_at': grantedAt,
+      if (revokedAt != null) 'revoked_at': revokedAt,
+      if (sourcePaymentRequestId != null)
+        'source_payment_request_id': sourcePaymentRequestId,
+    });
+  }
+
+  EntitlementsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? installId,
+      Value<int>? streamId,
+      Value<String>? status,
+      Value<String>? grantedAt,
+      Value<String?>? revokedAt,
+      Value<String?>? sourcePaymentRequestId}) {
+    return EntitlementsCompanion(
+      id: id ?? this.id,
+      installId: installId ?? this.installId,
+      streamId: streamId ?? this.streamId,
+      status: status ?? this.status,
+      grantedAt: grantedAt ?? this.grantedAt,
+      revokedAt: revokedAt ?? this.revokedAt,
+      sourcePaymentRequestId:
+          sourcePaymentRequestId ?? this.sourcePaymentRequestId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (installId.present) {
+      map['install_id'] = Variable<String>(installId.value);
+    }
+    if (streamId.present) {
+      map['stream_id'] = Variable<int>(streamId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (grantedAt.present) {
+      map['granted_at'] = Variable<String>(grantedAt.value);
+    }
+    if (revokedAt.present) {
+      map['revoked_at'] = Variable<String>(revokedAt.value);
+    }
+    if (sourcePaymentRequestId.present) {
+      map['source_payment_request_id'] =
+          Variable<String>(sourcePaymentRequestId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntitlementsCompanion(')
+          ..write('id: $id, ')
+          ..write('installId: $installId, ')
+          ..write('streamId: $streamId, ')
+          ..write('status: $status, ')
+          ..write('grantedAt: $grantedAt, ')
+          ..write('revokedAt: $revokedAt, ')
+          ..write('sourcePaymentRequestId: $sourcePaymentRequestId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+      'value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settings';
+  @override
+  VerificationContext validateIntegrity(Insertable<Setting> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  Setting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Setting(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}value'])!,
+    );
+  }
+
+  @override
+  $SettingsTable createAlias(String alias) {
+    return $SettingsTable(attachedDatabase, alias);
+  }
+}
+
+class Setting extends DataClass implements Insertable<Setting> {
+  final String key;
+  final String value;
+  const Setting({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  SettingsCompanion toCompanion(bool nullToAbsent) {
+    return SettingsCompanion(
+      key: Value(key),
+      value: Value(value),
+    );
+  }
+
+  factory Setting.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Setting(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  Setting copyWith({String? key, String? value}) => Setting(
+        key: key ?? this.key,
+        value: value ?? this.value,
+      );
+  Setting copyWithCompanion(SettingsCompanion data) {
+    return Setting(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Setting(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Setting && other.key == this.key && other.value == this.value);
+}
+
+class SettingsCompanion extends UpdateCompanion<Setting> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const SettingsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SettingsCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<Setting> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SettingsCompanion copyWith(
+      {Value<String>? key, Value<String>? value, Value<int>? rowid}) {
+    return SettingsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4349,6 +5646,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ExamQuestionsTable examQuestions = $ExamQuestionsTable(this);
   late final $ResourcesTable resources = $ResourcesTable(this);
   late final $AttemptsTable attempts = $AttemptsTable(this);
+  late final $InstallIdentitiesTable installIdentities =
+      $InstallIdentitiesTable(this);
+  late final $PaymentRequestsTable paymentRequests =
+      $PaymentRequestsTable(this);
+  late final $EntitlementsTable entitlements = $EntitlementsTable(this);
+  late final $SettingsTable settings = $SettingsTable(this);
   late final Index idxChaptersSubjectGrade = Index('idx_chapters_subject_grade',
       'CREATE INDEX idx_chapters_subject_grade ON chapters (subject_id, grade_id)');
   late final Index idxTopicsChapterId = Index('idx_topics_chapter_id',
@@ -4374,6 +5677,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       'CREATE INDEX idx_attempts_chapter_id ON attempts (chapter_id)');
   late final Index idxAttemptsExamId = Index('idx_attempts_exam_id',
       'CREATE INDEX idx_attempts_exam_id ON attempts (exam_id)');
+  late final Index idxEntitlementsInstall = Index('idx_entitlements_install',
+      'CREATE INDEX idx_entitlements_install ON entitlements (install_id, stream_id)');
+  late final Index idxPaymentRequestsInstall = Index(
+      'idx_payment_requests_install',
+      'CREATE INDEX idx_payment_requests_install ON payment_requests (install_id)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4391,6 +5699,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         examQuestions,
         resources,
         attempts,
+        installIdentities,
+        paymentRequests,
+        entitlements,
+        settings,
         idxChaptersSubjectGrade,
         idxTopicsChapterId,
         idxQuestionsSourcePack,
@@ -4402,7 +5714,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxAttemptsAttemptedAt,
         idxAttemptsSubjectId,
         idxAttemptsChapterId,
-        idxAttemptsExamId
+        idxAttemptsExamId,
+        idxEntitlementsInstall,
+        idxPaymentRequestsInstall
       ];
 }
 
@@ -4629,6 +5943,36 @@ final class $$StreamsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$PaymentRequestsTable, List<PaymentRequest>>
+      _paymentRequestsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.paymentRequests,
+              aliasName: 'streams__id__payment_requests__stream_id');
+
+  $$PaymentRequestsTableProcessedTableManager get paymentRequestsRefs {
+    final manager =
+        $$PaymentRequestsTableTableManager($_db, $_db.paymentRequests)
+            .filter((f) => f.streamId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_paymentRequestsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$EntitlementsTable, List<Entitlement>>
+      _entitlementsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.entitlements,
+              aliasName: 'streams__id__entitlements__stream_id');
+
+  $$EntitlementsTableProcessedTableManager get entitlementsRefs {
+    final manager = $$EntitlementsTableTableManager($_db, $_db.entitlements)
+        .filter((f) => f.streamId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_entitlementsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$StreamsTableFilterComposer
@@ -4659,6 +6003,48 @@ class $$StreamsTableFilterComposer
             $$SubjectsTableFilterComposer(
               $db: $db,
               $table: $db.subjects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> paymentRequestsRefs(
+      Expression<bool> Function($$PaymentRequestsTableFilterComposer f) f) {
+    final $$PaymentRequestsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.streamId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableFilterComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> entitlementsRefs(
+      Expression<bool> Function($$EntitlementsTableFilterComposer f) f) {
+    final $$EntitlementsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.streamId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableFilterComposer(
+              $db: $db,
+              $table: $db.entitlements,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -4719,6 +6105,48 @@ class $$StreamsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> paymentRequestsRefs<T extends Object>(
+      Expression<T> Function($$PaymentRequestsTableAnnotationComposer a) f) {
+    final $$PaymentRequestsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.streamId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> entitlementsRefs<T extends Object>(
+      Expression<T> Function($$EntitlementsTableAnnotationComposer a) f) {
+    final $$EntitlementsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.streamId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.entitlements,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$StreamsTableTableManager extends RootTableManager<
@@ -4732,7 +6160,8 @@ class $$StreamsTableTableManager extends RootTableManager<
     $$StreamsTableUpdateCompanionBuilder,
     (Stream, $$StreamsTableReferences),
     Stream,
-    PrefetchHooks Function({bool subjectsRefs})> {
+    PrefetchHooks Function(
+        {bool subjectsRefs, bool paymentRequestsRefs, bool entitlementsRefs})> {
   $$StreamsTableTableManager(_$AppDatabase db, $StreamsTable table)
       : super(TableManagerState(
           db: db,
@@ -4763,10 +6192,17 @@ class $$StreamsTableTableManager extends RootTableManager<
               .map((e) =>
                   (e.readTable(table), $$StreamsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({subjectsRefs = false}) {
+          prefetchHooksCallback: (
+              {subjectsRefs = false,
+              paymentRequestsRefs = false,
+              entitlementsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (subjectsRefs) db.subjects],
+              explicitlyWatchedTables: [
+                if (subjectsRefs) db.subjects,
+                if (paymentRequestsRefs) db.paymentRequests,
+                if (entitlementsRefs) db.entitlements
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -4778,6 +6214,32 @@ class $$StreamsTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$StreamsTableReferences(db, table, p0)
                                 .subjectsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.streamId == item.id),
+                        typedResults: items),
+                  if (paymentRequestsRefs)
+                    await $_getPrefetchedData<Stream, $StreamsTable,
+                            PaymentRequest>(
+                        currentTable: table,
+                        referencedTable: $$StreamsTableReferences
+                            ._paymentRequestsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$StreamsTableReferences(db, table, p0)
+                                .paymentRequestsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.streamId == item.id),
+                        typedResults: items),
+                  if (entitlementsRefs)
+                    await $_getPrefetchedData<Stream, $StreamsTable,
+                            Entitlement>(
+                        currentTable: table,
+                        referencedTable:
+                            $$StreamsTableReferences._entitlementsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$StreamsTableReferences(db, table, p0)
+                                .entitlementsRefs,
                         referencedItemsForCurrentItem: (item,
                                 referencedItems) =>
                             referencedItems.where((e) => e.streamId == item.id),
@@ -4800,7 +6262,8 @@ typedef $$StreamsTableProcessedTableManager = ProcessedTableManager<
     $$StreamsTableUpdateCompanionBuilder,
     (Stream, $$StreamsTableReferences),
     Stream,
-    PrefetchHooks Function({bool subjectsRefs})>;
+    PrefetchHooks Function(
+        {bool subjectsRefs, bool paymentRequestsRefs, bool entitlementsRefs})>;
 typedef $$SubjectsTableCreateCompanionBuilder = SubjectsCompanion Function({
   Value<int> id,
   required int streamId,
@@ -9885,6 +11348,1381 @@ typedef $$AttemptsTableProcessedTableManager = ProcessedTableManager<
     Attempt,
     PrefetchHooks Function(
         {bool questionId, bool subjectId, bool chapterId, bool examId})>;
+typedef $$InstallIdentitiesTableCreateCompanionBuilder
+    = InstallIdentitiesCompanion Function({
+  Value<int> id,
+  required String installId,
+  required String createdAt,
+});
+typedef $$InstallIdentitiesTableUpdateCompanionBuilder
+    = InstallIdentitiesCompanion Function({
+  Value<int> id,
+  Value<String> installId,
+  Value<String> createdAt,
+});
+
+final class $$InstallIdentitiesTableReferences extends BaseReferences<
+    _$AppDatabase, $InstallIdentitiesTable, InstallIdentity> {
+  $$InstallIdentitiesTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$PaymentRequestsTable,
+      List<PaymentRequest>> _paymentRequestsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.paymentRequests,
+          aliasName:
+              'install_identities__install_id__payment_requests__install_id');
+
+  $$PaymentRequestsTableProcessedTableManager get paymentRequestsRefs {
+    final manager =
+        $$PaymentRequestsTableTableManager($_db, $_db.paymentRequests).filter(
+            (f) => f.installId.installId
+                .sqlEquals($_itemColumn<String>('install_id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_paymentRequestsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$EntitlementsTable, List<Entitlement>>
+      _entitlementsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.entitlements,
+              aliasName:
+                  'install_identities__install_id__entitlements__install_id');
+
+  $$EntitlementsTableProcessedTableManager get entitlementsRefs {
+    final manager = $$EntitlementsTableTableManager($_db, $_db.entitlements)
+        .filter((f) => f.installId.installId
+            .sqlEquals($_itemColumn<String>('install_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_entitlementsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$InstallIdentitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $InstallIdentitiesTable> {
+  $$InstallIdentitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get installId => $composableBuilder(
+      column: $table.installId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> paymentRequestsRefs(
+      Expression<bool> Function($$PaymentRequestsTableFilterComposer f) f) {
+    final $$PaymentRequestsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableFilterComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> entitlementsRefs(
+      Expression<bool> Function($$EntitlementsTableFilterComposer f) f) {
+    final $$EntitlementsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableFilterComposer(
+              $db: $db,
+              $table: $db.entitlements,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$InstallIdentitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $InstallIdentitiesTable> {
+  $$InstallIdentitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get installId => $composableBuilder(
+      column: $table.installId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$InstallIdentitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InstallIdentitiesTable> {
+  $$InstallIdentitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get installId =>
+      $composableBuilder(column: $table.installId, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> paymentRequestsRefs<T extends Object>(
+      Expression<T> Function($$PaymentRequestsTableAnnotationComposer a) f) {
+    final $$PaymentRequestsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> entitlementsRefs<T extends Object>(
+      Expression<T> Function($$EntitlementsTableAnnotationComposer a) f) {
+    final $$EntitlementsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.entitlements,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$InstallIdentitiesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $InstallIdentitiesTable,
+    InstallIdentity,
+    $$InstallIdentitiesTableFilterComposer,
+    $$InstallIdentitiesTableOrderingComposer,
+    $$InstallIdentitiesTableAnnotationComposer,
+    $$InstallIdentitiesTableCreateCompanionBuilder,
+    $$InstallIdentitiesTableUpdateCompanionBuilder,
+    (InstallIdentity, $$InstallIdentitiesTableReferences),
+    InstallIdentity,
+    PrefetchHooks Function({bool paymentRequestsRefs, bool entitlementsRefs})> {
+  $$InstallIdentitiesTableTableManager(
+      _$AppDatabase db, $InstallIdentitiesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InstallIdentitiesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InstallIdentitiesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InstallIdentitiesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> installId = const Value.absent(),
+            Value<String> createdAt = const Value.absent(),
+          }) =>
+              InstallIdentitiesCompanion(
+            id: id,
+            installId: installId,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String installId,
+            required String createdAt,
+          }) =>
+              InstallIdentitiesCompanion.insert(
+            id: id,
+            installId: installId,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$InstallIdentitiesTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {paymentRequestsRefs = false, entitlementsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (paymentRequestsRefs) db.paymentRequests,
+                if (entitlementsRefs) db.entitlements
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (paymentRequestsRefs)
+                    await $_getPrefetchedData<InstallIdentity,
+                            $InstallIdentitiesTable, PaymentRequest>(
+                        currentTable: table,
+                        referencedTable: $$InstallIdentitiesTableReferences
+                            ._paymentRequestsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InstallIdentitiesTableReferences(db, table, p0)
+                                .paymentRequestsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.installId == item.installId),
+                        typedResults: items),
+                  if (entitlementsRefs)
+                    await $_getPrefetchedData<InstallIdentity,
+                            $InstallIdentitiesTable, Entitlement>(
+                        currentTable: table,
+                        referencedTable: $$InstallIdentitiesTableReferences
+                            ._entitlementsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InstallIdentitiesTableReferences(db, table, p0)
+                                .entitlementsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.installId == item.installId),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$InstallIdentitiesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $InstallIdentitiesTable,
+    InstallIdentity,
+    $$InstallIdentitiesTableFilterComposer,
+    $$InstallIdentitiesTableOrderingComposer,
+    $$InstallIdentitiesTableAnnotationComposer,
+    $$InstallIdentitiesTableCreateCompanionBuilder,
+    $$InstallIdentitiesTableUpdateCompanionBuilder,
+    (InstallIdentity, $$InstallIdentitiesTableReferences),
+    InstallIdentity,
+    PrefetchHooks Function({bool paymentRequestsRefs, bool entitlementsRefs})>;
+typedef $$PaymentRequestsTableCreateCompanionBuilder = PaymentRequestsCompanion
+    Function({
+  required String requestId,
+  required String installId,
+  required int streamId,
+  required String proofType,
+  required String proofValue,
+  required String status,
+  Value<String?> rejectionReason,
+  required String submittedAt,
+  Value<String?> verifiedAt,
+  Value<int> rowid,
+});
+typedef $$PaymentRequestsTableUpdateCompanionBuilder = PaymentRequestsCompanion
+    Function({
+  Value<String> requestId,
+  Value<String> installId,
+  Value<int> streamId,
+  Value<String> proofType,
+  Value<String> proofValue,
+  Value<String> status,
+  Value<String?> rejectionReason,
+  Value<String> submittedAt,
+  Value<String?> verifiedAt,
+  Value<int> rowid,
+});
+
+final class $$PaymentRequestsTableReferences extends BaseReferences<
+    _$AppDatabase, $PaymentRequestsTable, PaymentRequest> {
+  $$PaymentRequestsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $InstallIdentitiesTable _installIdTable(_$AppDatabase db) =>
+      db.installIdentities.createAlias(
+          'payment_requests__install_id__install_identities__install_id');
+
+  $$InstallIdentitiesTableProcessedTableManager get installId {
+    final $_column = $_itemColumn<String>('install_id')!;
+
+    final manager =
+        $$InstallIdentitiesTableTableManager($_db, $_db.installIdentities)
+            .filter((f) => f.installId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_installIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $StreamsTable _streamIdTable(_$AppDatabase db) =>
+      db.streams.createAlias('payment_requests__stream_id__streams__id');
+
+  $$StreamsTableProcessedTableManager get streamId {
+    final $_column = $_itemColumn<int>('stream_id')!;
+
+    final manager = $$StreamsTableTableManager($_db, $_db.streams)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_streamIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static MultiTypedResultKey<$EntitlementsTable, List<Entitlement>>
+      _entitlementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.entitlements,
+          aliasName:
+              'payment_requests__request_id__entitlements__source_payment_request_id');
+
+  $$EntitlementsTableProcessedTableManager get entitlementsRefs {
+    final manager = $$EntitlementsTableTableManager($_db, $_db.entitlements)
+        .filter((f) => f.sourcePaymentRequestId.requestId
+            .sqlEquals($_itemColumn<String>('request_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_entitlementsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$PaymentRequestsTableFilterComposer
+    extends Composer<_$AppDatabase, $PaymentRequestsTable> {
+  $$PaymentRequestsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get requestId => $composableBuilder(
+      column: $table.requestId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get proofType => $composableBuilder(
+      column: $table.proofType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get proofValue => $composableBuilder(
+      column: $table.proofValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get submittedAt => $composableBuilder(
+      column: $table.submittedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get verifiedAt => $composableBuilder(
+      column: $table.verifiedAt, builder: (column) => ColumnFilters(column));
+
+  $$InstallIdentitiesTableFilterComposer get installId {
+    final $$InstallIdentitiesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.installIdentities,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InstallIdentitiesTableFilterComposer(
+              $db: $db,
+              $table: $db.installIdentities,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$StreamsTableFilterComposer get streamId {
+    final $$StreamsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableFilterComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<bool> entitlementsRefs(
+      Expression<bool> Function($$EntitlementsTableFilterComposer f) f) {
+    final $$EntitlementsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.requestId,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.sourcePaymentRequestId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableFilterComposer(
+              $db: $db,
+              $table: $db.entitlements,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$PaymentRequestsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PaymentRequestsTable> {
+  $$PaymentRequestsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get requestId => $composableBuilder(
+      column: $table.requestId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get proofType => $composableBuilder(
+      column: $table.proofType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get proofValue => $composableBuilder(
+      column: $table.proofValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get submittedAt => $composableBuilder(
+      column: $table.submittedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get verifiedAt => $composableBuilder(
+      column: $table.verifiedAt, builder: (column) => ColumnOrderings(column));
+
+  $$InstallIdentitiesTableOrderingComposer get installId {
+    final $$InstallIdentitiesTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.installIdentities,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InstallIdentitiesTableOrderingComposer(
+              $db: $db,
+              $table: $db.installIdentities,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$StreamsTableOrderingComposer get streamId {
+    final $$StreamsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableOrderingComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$PaymentRequestsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PaymentRequestsTable> {
+  $$PaymentRequestsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get requestId =>
+      $composableBuilder(column: $table.requestId, builder: (column) => column);
+
+  GeneratedColumn<String> get proofType =>
+      $composableBuilder(column: $table.proofType, builder: (column) => column);
+
+  GeneratedColumn<String> get proofValue => $composableBuilder(
+      column: $table.proofValue, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get rejectionReason => $composableBuilder(
+      column: $table.rejectionReason, builder: (column) => column);
+
+  GeneratedColumn<String> get submittedAt => $composableBuilder(
+      column: $table.submittedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get verifiedAt => $composableBuilder(
+      column: $table.verifiedAt, builder: (column) => column);
+
+  $$InstallIdentitiesTableAnnotationComposer get installId {
+    final $$InstallIdentitiesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.installId,
+            referencedTable: $db.installIdentities,
+            getReferencedColumn: (t) => t.installId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InstallIdentitiesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.installIdentities,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return composer;
+  }
+
+  $$StreamsTableAnnotationComposer get streamId {
+    final $$StreamsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<T> entitlementsRefs<T extends Object>(
+      Expression<T> Function($$EntitlementsTableAnnotationComposer a) f) {
+    final $$EntitlementsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.requestId,
+        referencedTable: $db.entitlements,
+        getReferencedColumn: (t) => t.sourcePaymentRequestId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$EntitlementsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.entitlements,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$PaymentRequestsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PaymentRequestsTable,
+    PaymentRequest,
+    $$PaymentRequestsTableFilterComposer,
+    $$PaymentRequestsTableOrderingComposer,
+    $$PaymentRequestsTableAnnotationComposer,
+    $$PaymentRequestsTableCreateCompanionBuilder,
+    $$PaymentRequestsTableUpdateCompanionBuilder,
+    (PaymentRequest, $$PaymentRequestsTableReferences),
+    PaymentRequest,
+    PrefetchHooks Function(
+        {bool installId, bool streamId, bool entitlementsRefs})> {
+  $$PaymentRequestsTableTableManager(
+      _$AppDatabase db, $PaymentRequestsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PaymentRequestsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PaymentRequestsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PaymentRequestsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> requestId = const Value.absent(),
+            Value<String> installId = const Value.absent(),
+            Value<int> streamId = const Value.absent(),
+            Value<String> proofType = const Value.absent(),
+            Value<String> proofValue = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<String?> rejectionReason = const Value.absent(),
+            Value<String> submittedAt = const Value.absent(),
+            Value<String?> verifiedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PaymentRequestsCompanion(
+            requestId: requestId,
+            installId: installId,
+            streamId: streamId,
+            proofType: proofType,
+            proofValue: proofValue,
+            status: status,
+            rejectionReason: rejectionReason,
+            submittedAt: submittedAt,
+            verifiedAt: verifiedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String requestId,
+            required String installId,
+            required int streamId,
+            required String proofType,
+            required String proofValue,
+            required String status,
+            Value<String?> rejectionReason = const Value.absent(),
+            required String submittedAt,
+            Value<String?> verifiedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PaymentRequestsCompanion.insert(
+            requestId: requestId,
+            installId: installId,
+            streamId: streamId,
+            proofType: proofType,
+            proofValue: proofValue,
+            status: status,
+            rejectionReason: rejectionReason,
+            submittedAt: submittedAt,
+            verifiedAt: verifiedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$PaymentRequestsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {installId = false, streamId = false, entitlementsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (entitlementsRefs) db.entitlements],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (installId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.installId,
+                    referencedTable:
+                        $$PaymentRequestsTableReferences._installIdTable(db),
+                    referencedColumn: $$PaymentRequestsTableReferences
+                        ._installIdTable(db)
+                        .installId,
+                  ) as T;
+                }
+                if (streamId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.streamId,
+                    referencedTable:
+                        $$PaymentRequestsTableReferences._streamIdTable(db),
+                    referencedColumn:
+                        $$PaymentRequestsTableReferences._streamIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (entitlementsRefs)
+                    await $_getPrefetchedData<PaymentRequest,
+                            $PaymentRequestsTable, Entitlement>(
+                        currentTable: table,
+                        referencedTable: $$PaymentRequestsTableReferences
+                            ._entitlementsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$PaymentRequestsTableReferences(db, table, p0)
+                                .entitlementsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems.where(
+                                (e) =>
+                                    e.sourcePaymentRequestId == item.requestId),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$PaymentRequestsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PaymentRequestsTable,
+    PaymentRequest,
+    $$PaymentRequestsTableFilterComposer,
+    $$PaymentRequestsTableOrderingComposer,
+    $$PaymentRequestsTableAnnotationComposer,
+    $$PaymentRequestsTableCreateCompanionBuilder,
+    $$PaymentRequestsTableUpdateCompanionBuilder,
+    (PaymentRequest, $$PaymentRequestsTableReferences),
+    PaymentRequest,
+    PrefetchHooks Function(
+        {bool installId, bool streamId, bool entitlementsRefs})>;
+typedef $$EntitlementsTableCreateCompanionBuilder = EntitlementsCompanion
+    Function({
+  Value<int> id,
+  required String installId,
+  required int streamId,
+  required String status,
+  required String grantedAt,
+  Value<String?> revokedAt,
+  Value<String?> sourcePaymentRequestId,
+});
+typedef $$EntitlementsTableUpdateCompanionBuilder = EntitlementsCompanion
+    Function({
+  Value<int> id,
+  Value<String> installId,
+  Value<int> streamId,
+  Value<String> status,
+  Value<String> grantedAt,
+  Value<String?> revokedAt,
+  Value<String?> sourcePaymentRequestId,
+});
+
+final class $$EntitlementsTableReferences
+    extends BaseReferences<_$AppDatabase, $EntitlementsTable, Entitlement> {
+  $$EntitlementsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $InstallIdentitiesTable _installIdTable(_$AppDatabase db) => db
+      .installIdentities
+      .createAlias('entitlements__install_id__install_identities__install_id');
+
+  $$InstallIdentitiesTableProcessedTableManager get installId {
+    final $_column = $_itemColumn<String>('install_id')!;
+
+    final manager =
+        $$InstallIdentitiesTableTableManager($_db, $_db.installIdentities)
+            .filter((f) => f.installId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_installIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $StreamsTable _streamIdTable(_$AppDatabase db) =>
+      db.streams.createAlias('entitlements__stream_id__streams__id');
+
+  $$StreamsTableProcessedTableManager get streamId {
+    final $_column = $_itemColumn<int>('stream_id')!;
+
+    final manager = $$StreamsTableTableManager($_db, $_db.streams)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_streamIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $PaymentRequestsTable _sourcePaymentRequestIdTable(_$AppDatabase db) =>
+      db.paymentRequests.createAlias(
+          'entitlements__source_payment_request_id__payment_requests__request_id');
+
+  $$PaymentRequestsTableProcessedTableManager? get sourcePaymentRequestId {
+    final $_column = $_itemColumn<String>('source_payment_request_id');
+    if ($_column == null) return null;
+    final manager =
+        $$PaymentRequestsTableTableManager($_db, $_db.paymentRequests)
+            .filter((f) => f.requestId.sqlEquals($_column));
+    final item =
+        $_typedResult.readTableOrNull(_sourcePaymentRequestIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$EntitlementsTableFilterComposer
+    extends Composer<_$AppDatabase, $EntitlementsTable> {
+  $$EntitlementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get grantedAt => $composableBuilder(
+      column: $table.grantedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get revokedAt => $composableBuilder(
+      column: $table.revokedAt, builder: (column) => ColumnFilters(column));
+
+  $$InstallIdentitiesTableFilterComposer get installId {
+    final $$InstallIdentitiesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.installIdentities,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InstallIdentitiesTableFilterComposer(
+              $db: $db,
+              $table: $db.installIdentities,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$StreamsTableFilterComposer get streamId {
+    final $$StreamsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableFilterComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$PaymentRequestsTableFilterComposer get sourcePaymentRequestId {
+    final $$PaymentRequestsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sourcePaymentRequestId,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.requestId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableFilterComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$EntitlementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntitlementsTable> {
+  $$EntitlementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get grantedAt => $composableBuilder(
+      column: $table.grantedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get revokedAt => $composableBuilder(
+      column: $table.revokedAt, builder: (column) => ColumnOrderings(column));
+
+  $$InstallIdentitiesTableOrderingComposer get installId {
+    final $$InstallIdentitiesTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.installId,
+        referencedTable: $db.installIdentities,
+        getReferencedColumn: (t) => t.installId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InstallIdentitiesTableOrderingComposer(
+              $db: $db,
+              $table: $db.installIdentities,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$StreamsTableOrderingComposer get streamId {
+    final $$StreamsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableOrderingComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$PaymentRequestsTableOrderingComposer get sourcePaymentRequestId {
+    final $$PaymentRequestsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sourcePaymentRequestId,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.requestId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableOrderingComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$EntitlementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntitlementsTable> {
+  $$EntitlementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get grantedAt =>
+      $composableBuilder(column: $table.grantedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get revokedAt =>
+      $composableBuilder(column: $table.revokedAt, builder: (column) => column);
+
+  $$InstallIdentitiesTableAnnotationComposer get installId {
+    final $$InstallIdentitiesTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.installId,
+            referencedTable: $db.installIdentities,
+            getReferencedColumn: (t) => t.installId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InstallIdentitiesTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.installIdentities,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return composer;
+  }
+
+  $$StreamsTableAnnotationComposer get streamId {
+    final $$StreamsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.streamId,
+        referencedTable: $db.streams,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$StreamsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.streams,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$PaymentRequestsTableAnnotationComposer get sourcePaymentRequestId {
+    final $$PaymentRequestsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.sourcePaymentRequestId,
+        referencedTable: $db.paymentRequests,
+        getReferencedColumn: (t) => t.requestId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$PaymentRequestsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.paymentRequests,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$EntitlementsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $EntitlementsTable,
+    Entitlement,
+    $$EntitlementsTableFilterComposer,
+    $$EntitlementsTableOrderingComposer,
+    $$EntitlementsTableAnnotationComposer,
+    $$EntitlementsTableCreateCompanionBuilder,
+    $$EntitlementsTableUpdateCompanionBuilder,
+    (Entitlement, $$EntitlementsTableReferences),
+    Entitlement,
+    PrefetchHooks Function(
+        {bool installId, bool streamId, bool sourcePaymentRequestId})> {
+  $$EntitlementsTableTableManager(_$AppDatabase db, $EntitlementsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntitlementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntitlementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntitlementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> installId = const Value.absent(),
+            Value<int> streamId = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<String> grantedAt = const Value.absent(),
+            Value<String?> revokedAt = const Value.absent(),
+            Value<String?> sourcePaymentRequestId = const Value.absent(),
+          }) =>
+              EntitlementsCompanion(
+            id: id,
+            installId: installId,
+            streamId: streamId,
+            status: status,
+            grantedAt: grantedAt,
+            revokedAt: revokedAt,
+            sourcePaymentRequestId: sourcePaymentRequestId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String installId,
+            required int streamId,
+            required String status,
+            required String grantedAt,
+            Value<String?> revokedAt = const Value.absent(),
+            Value<String?> sourcePaymentRequestId = const Value.absent(),
+          }) =>
+              EntitlementsCompanion.insert(
+            id: id,
+            installId: installId,
+            streamId: streamId,
+            status: status,
+            grantedAt: grantedAt,
+            revokedAt: revokedAt,
+            sourcePaymentRequestId: sourcePaymentRequestId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$EntitlementsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: (
+              {installId = false,
+              streamId = false,
+              sourcePaymentRequestId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (installId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.installId,
+                    referencedTable:
+                        $$EntitlementsTableReferences._installIdTable(db),
+                    referencedColumn: $$EntitlementsTableReferences
+                        ._installIdTable(db)
+                        .installId,
+                  ) as T;
+                }
+                if (streamId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.streamId,
+                    referencedTable:
+                        $$EntitlementsTableReferences._streamIdTable(db),
+                    referencedColumn:
+                        $$EntitlementsTableReferences._streamIdTable(db).id,
+                  ) as T;
+                }
+                if (sourcePaymentRequestId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.sourcePaymentRequestId,
+                    referencedTable: $$EntitlementsTableReferences
+                        ._sourcePaymentRequestIdTable(db),
+                    referencedColumn: $$EntitlementsTableReferences
+                        ._sourcePaymentRequestIdTable(db)
+                        .requestId,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$EntitlementsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $EntitlementsTable,
+    Entitlement,
+    $$EntitlementsTableFilterComposer,
+    $$EntitlementsTableOrderingComposer,
+    $$EntitlementsTableAnnotationComposer,
+    $$EntitlementsTableCreateCompanionBuilder,
+    $$EntitlementsTableUpdateCompanionBuilder,
+    (Entitlement, $$EntitlementsTableReferences),
+    Entitlement,
+    PrefetchHooks Function(
+        {bool installId, bool streamId, bool sourcePaymentRequestId})>;
+typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
+  required String key,
+  required String value,
+  Value<int> rowid,
+});
+typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
+  Value<String> key,
+  Value<String> value,
+  Value<int> rowid,
+});
+
+class $$SettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+      column: $table.key, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get value => $composableBuilder(
+      column: $table.value, builder: (column) => ColumnFilters(column));
+}
+
+class $$SettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+      column: $table.key, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get value => $composableBuilder(
+      column: $table.value, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$SettingsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SettingsTable,
+    Setting,
+    $$SettingsTableFilterComposer,
+    $$SettingsTableOrderingComposer,
+    $$SettingsTableAnnotationComposer,
+    $$SettingsTableCreateCompanionBuilder,
+    $$SettingsTableUpdateCompanionBuilder,
+    (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+    Setting,
+    PrefetchHooks Function()> {
+  $$SettingsTableTableManager(_$AppDatabase db, $SettingsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SettingsCompanion(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String key,
+            required String value,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SettingsCompanion.insert(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SettingsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SettingsTable,
+    Setting,
+    $$SettingsTableFilterComposer,
+    $$SettingsTableOrderingComposer,
+    $$SettingsTableAnnotationComposer,
+    $$SettingsTableCreateCompanionBuilder,
+    $$SettingsTableUpdateCompanionBuilder,
+    (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+    Setting,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9913,4 +12751,12 @@ class $AppDatabaseManager {
       $$ResourcesTableTableManager(_db, _db.resources);
   $$AttemptsTableTableManager get attempts =>
       $$AttemptsTableTableManager(_db, _db.attempts);
+  $$InstallIdentitiesTableTableManager get installIdentities =>
+      $$InstallIdentitiesTableTableManager(_db, _db.installIdentities);
+  $$PaymentRequestsTableTableManager get paymentRequests =>
+      $$PaymentRequestsTableTableManager(_db, _db.paymentRequests);
+  $$EntitlementsTableTableManager get entitlements =>
+      $$EntitlementsTableTableManager(_db, _db.entitlements);
+  $$SettingsTableTableManager get settings =>
+      $$SettingsTableTableManager(_db, _db.settings);
 }
