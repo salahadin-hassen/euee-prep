@@ -8,9 +8,11 @@ keys without inventing a ``correct_choice_index``.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -26,6 +28,37 @@ except ImportError:  # pragma: no cover - exercised by the CLI environment
     genai = None
     types = None
 
+
+VISUAL_ASSET_TYPES = frozenset({"image", "graph", "diagram", "table", "figure"})
+
+VISUAL_ASSET_SCHEMA_DEF: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": sorted(VISUAL_ASSET_TYPES),
+        },
+        "source_region": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "width": {"type": "number"},
+                "height": {"type": "number"},
+            },
+            "required": ["x", "y", "width", "height"],
+        },
+        "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+        },
+        "uncertainties": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    },
+    "required": ["type", "source_region", "confidence", "uncertainties"],
+}
 
 EXTRACTION_SCHEMA: Dict[str, Any] = {
     "type": "object",
@@ -62,6 +95,10 @@ EXTRACTION_SCHEMA: Dict[str, Any] = {
                     "uncertainties": {
                         "type": "array",
                         "items": {"type": "string"},
+                    },
+                    "visual_assets": {
+                        "type": "array",
+                        "items": VISUAL_ASSET_SCHEMA_DEF,
                     },
                 },
                 "required": [
@@ -160,6 +197,7 @@ class PageResult:
     answer_analysis: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    visual_assets_processed: bool = False
 
 
 class GeminiQuotaExhaustedError(RuntimeError):
@@ -218,6 +256,17 @@ Rules:
 - Handwritten marks, circles, highlights, and annotations are not an authoritative answer key.
 - Unless the page explicitly identifies an official answer key, set correct_choice_index to null and answer_status to unresolved.
 - Do not use outside knowledge.
+
+Visual assets:
+- Identify visual regions that are materially part of a question: diagrams, figures, graphs, tables, images.
+- Do NOT identify decorative page elements (page numbers, headers, footers, borders).
+- Do NOT invent visual regions that are not visible on the page.
+- Preserve the visual element as source content — do not transcribe visual content into invented text.
+- If uncertain whether a visual is required for understanding the question, mark uncertainty in the uncertainties field instead of guessing.
+- Each visual asset must have its own source_region bounding box, separate from the question's source_region.
+- Use type "image" for photographs or illustrations, "graph" for charts/plots, "diagram" for technical diagrams, "table" for tabular data, "figure" for numbered figures.
+- Set confidence to "high" if the region clearly contains the visual, "medium" if partially visible or ambiguous bounds, "low" if uncertain.
+- Do not treat handwritten markings as authoritative answers.
 """
 
 
@@ -265,13 +314,39 @@ Rules:
 """
 
 
-def render_pages(pdf_path: Path, output_dir: Path, dpi: int = 180) -> List[Path]:
+def parse_page_selection(value: str) -> List[int]:
+    """Parse a comma-separated page selection such as ``1,3-4``."""
+    pages = set()
+    for part in value.split(","):
+        item = part.strip()
+        if not item:
+            raise ValueError("page selection contains an empty item")
+        match = re.fullmatch(r"(\d+)(?:-(\d+))?", item)
+        if not match:
+            raise ValueError("invalid page selection: %s" % item)
+        start = int(match.group(1))
+        end = int(match.group(2) or start)
+        if start < 1 or end < start:
+            raise ValueError("invalid page range: %s" % item)
+        pages.update(range(start, end + 1))
+    return sorted(pages)
+
+
+def render_pages(
+    pdf_path: Path,
+    output_dir: Path,
+    dpi: int = 180,
+    pages: Optional[Iterable[int]] = None,
+) -> List[Path]:
     if fitz is None:
         raise RuntimeError("PyMuPDF is required; install it with `python -m pip install PyMuPDF`")
     output_dir.mkdir(parents=True, exist_ok=True)
     rendered: List[Path] = []
+    selected = set(pages) if pages is not None else None
     with fitz.open(pdf_path) as document:
         for index, page in enumerate(document, start=1):
+            if selected is not None and index not in selected:
+                continue
             target = output_dir / ("page-%03d.png" % index)
             if not target.exists():
                 pixmap = page.get_pixmap(dpi=dpi, alpha=False)
@@ -305,6 +380,305 @@ def _call_json(client: Any, model: str, image_path: Path, prompt: str, schema: D
             raise GeminiUnavailableError(_error_text(exc)) from exc
         raise
     return _json_response(response)
+
+
+# ---------------------------------------------------------------------------
+# Visual asset helpers
+# ---------------------------------------------------------------------------
+
+def _compute_checksum(data: bytes) -> str:
+    """Return ``sha256:<hex>`` for the given bytes."""
+    h = hashlib.sha256(data)
+    return "sha256:%s" % h.hexdigest()
+
+
+def validate_visual_assets(
+    extraction: Dict[str, Any], page: int
+) -> List[str]:
+    """Deterministically validate visual_assets in an extraction result.
+
+    Returns a list of error strings (empty means valid).
+    """
+    errors: List[str] = []
+    questions = extraction.get("questions", [])
+    if not isinstance(questions, list):
+        return errors
+
+    for q_index, question in enumerate(questions):
+        where = "questions[%d]" % q_index
+        if not isinstance(question, dict):
+            continue
+        number = question.get("question_number")
+        assets = question.get("visual_assets")
+        if assets is None:
+            continue
+        if not isinstance(assets, list):
+            errors.append("%s.visual_assets must be an array" % where)
+            continue
+
+        asset_numbers: List[int] = []
+        for a_index, asset in enumerate(assets):
+            asset_where = "%s.visual_assets[%d]" % (where, a_index)
+            if not isinstance(asset, dict):
+                errors.append("%s must be an object" % asset_where)
+                continue
+
+            asset_type = asset.get("type")
+            if asset_type not in VISUAL_ASSET_TYPES:
+                errors.append(
+                    "%s.type must be one of %s, got %r"
+                    % (asset_where, sorted(VISUAL_ASSET_TYPES), asset_type)
+                )
+
+            region = asset.get("source_region")
+            if not isinstance(region, dict):
+                errors.append("%s.source_region is required" % asset_where)
+                continue
+
+            for key in ("x", "y", "width", "height"):
+                val = region.get(key)
+                if not isinstance(val, (int, float)):
+                    errors.append("%s.source_region.%s must be a number" % (asset_where, key))
+                elif val < 0 or val > 1:
+                    errors.append(
+                        "%s.source_region.%s must be in [0, 1], got %s"
+                        % (asset_where, key, val)
+                    )
+
+            if isinstance(region.get("width"), (int, float)) and isinstance(region.get("height"), (int, float)):
+                if region["width"] <= 0 or region["height"] <= 0:
+                    errors.append(
+                        "%s.source_region width and height must be > 0" % asset_where
+                    )
+
+            confidence = asset.get("confidence")
+            if confidence not in {"high", "medium", "low"}:
+                errors.append(
+                    "%s.confidence must be high, medium, or low, got %r"
+                    % (asset_where, confidence)
+                )
+
+            uncertainties = asset.get("uncertainties")
+            if not isinstance(uncertainties, list):
+                errors.append("%s.uncertainties must be an array" % asset_where)
+            elif any(not isinstance(u, str) for u in uncertainties):
+                errors.append("%s.uncertainties must contain only strings" % asset_where)
+
+            asset_index = a_index + 1
+            if asset_index in asset_numbers:
+                errors.append("%s duplicate visual asset index %d" % (asset_where, asset_index))
+            else:
+                asset_numbers.append(asset_index)
+
+    return errors
+
+
+def validate_visual_asset_crops(
+    output_root: Path,
+    extraction: Dict[str, Any],
+    page: int,
+) -> List[str]:
+    """Validate that crop files exist, are non-trivial, and match their manifests.
+
+    Returns a list of error strings (empty means valid).
+    """
+    errors: List[str] = []
+    assets_dir = output_root / "visual_assets"
+    questions = extraction.get("questions", [])
+    if not isinstance(questions, list):
+        return errors
+
+    for q_index, question in enumerate(questions):
+        if not isinstance(question, dict):
+            continue
+        number = question.get("question_number")
+        assets = question.get("visual_assets")
+        if not isinstance(assets, list):
+            continue
+
+        for a_index, asset in enumerate(assets):
+            if not isinstance(asset, dict):
+                continue
+            asset_index = a_index + 1
+            asset_type = asset.get("type", "unknown")
+
+            crop_name = "page-%03d-question-%03d-%s-%02d.png" % (
+                page, number, asset_type, asset_index,
+            )
+            crop_path = assets_dir / crop_name
+            manifest_path = assets_dir / (crop_name + ".manifest.json")
+
+            if not crop_path.exists():
+                errors.append("crop file missing: %s" % crop_name)
+                continue
+
+            crop_bytes = crop_path.read_bytes()
+            if len(crop_bytes) < 100:
+                errors.append("crop file too small (<100 bytes): %s" % crop_name)
+
+            if not manifest_path.exists():
+                errors.append("manifest missing: %s" % crop_name)
+                continue
+
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                errors.append("manifest unreadable: %s" % crop_name)
+                continue
+
+            expected_checksum = manifest.get("checksum")
+            actual_checksum = _compute_checksum(crop_bytes)
+            if expected_checksum != actual_checksum:
+                errors.append(
+                    "checksum mismatch for %s: expected %s, got %s"
+                    % (crop_name, expected_checksum, actual_checksum)
+                )
+
+            expected_width = manifest.get("pixel_width")
+            expected_height = manifest.get("pixel_height")
+            if not isinstance(expected_width, int) or not isinstance(expected_height, int):
+                errors.append("manifest pixel dimensions missing for %s" % crop_name)
+            elif expected_width <= 0 or expected_height <= 0:
+                errors.append(
+                    "manifest pixel dimensions must be positive for %s" % crop_name
+                )
+
+    return errors
+
+
+def _crop_visual_assets(
+    extraction: Dict[str, Any],
+    page_image: Path,
+    output_root: Path,
+    page: int,
+) -> List[Dict[str, Any]]:
+    """Crop visual asset regions from the page image and write manifests.
+
+    Returns a list of manifest dicts for all successfully processed assets.
+    Skips assets whose crops already exist and are valid.
+    """
+    if fitz is None:
+        raise RuntimeError("PyMuPDF is required for visual asset cropping")
+
+    assets_dir = output_root / "visual_assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    questions = extraction.get("questions", [])
+    if not isinstance(questions, list):
+        return []
+
+    manifests: List[Dict[str, Any]] = []
+
+    # Open the page image to get pixel dimensions.
+    with fitz.open(page_image) as img_doc:
+        img_page = img_doc[0]
+        img_width = img_page.rect.width
+        img_height = img_page.rect.height
+
+    for question in questions:
+        if not isinstance(question, dict):
+            continue
+        number = question.get("question_number")
+        assets = question.get("visual_assets")
+        if not isinstance(assets, list):
+            continue
+
+        for a_index, asset in enumerate(assets):
+            if not isinstance(asset, dict):
+                continue
+
+            asset_type = asset.get("type", "unknown")
+            region = asset.get("source_region")
+            if not isinstance(region, dict):
+                continue
+
+            x = region.get("x", 0)
+            y = region.get("y", 0)
+            w = region.get("width", 0)
+            h = region.get("height", 0)
+
+            # Clamp to [0,1] and ensure positive dimensions.
+            x = max(0.0, min(1.0, float(x)))
+            y = max(0.0, min(1.0, float(y)))
+            w = max(0.0, min(1.0 - x, float(w)))
+            h = max(0.0, min(1.0 - y, float(h)))
+            if w <= 0 or h <= 0:
+                continue
+
+            # Round to 6 decimal places for stable manifest serialization
+            # and deterministic pixel-coordinate computation.
+            x = round(x, 6)
+            y = round(y, 6)
+            w = round(w, 6)
+            h = round(h, 6)
+
+            # Convert normalized coords to pixels.
+            px_x = int(round(x * img_width))
+            px_y = int(round(y * img_height))
+            px_w = int(round(w * img_width))
+            px_h = int(round(h * img_height))
+
+            # Ensure minimum size.
+            px_w = max(px_w, 1)
+            px_h = max(px_h, 1)
+
+            asset_index = a_index + 1
+            crop_name = "page-%03d-question-%03d-%s-%02d.png" % (
+                page, number, asset_type, asset_index,
+            )
+            crop_path = assets_dir / crop_name
+            manifest_path = assets_dir / (crop_name + ".manifest.json")
+
+            # Check if crop already exists and is valid.
+            if crop_path.exists() and manifest_path.exists():
+                try:
+                    existing_manifest = json.loads(
+                        manifest_path.read_text(encoding="utf-8")
+                    )
+                    if (
+                        existing_manifest.get("pdf_page") == page
+                        and existing_manifest.get("question_number") == number
+                        and existing_manifest.get("asset_type") == asset_type
+                    ):
+                        manifests.append(existing_manifest)
+                        continue
+                except (OSError, json.JSONDecodeError):
+                    pass  # Regenerate.
+
+            # Crop from the page image using PyMuPDF.
+            clip = fitz.Rect(px_x, px_y, px_x + px_w, px_y + px_h)
+            with fitz.open(page_image) as img_doc:
+                img_page = img_doc[0]
+                pixmap = img_page.get_pixmap(clip=clip, alpha=False)
+                crop_bytes = pixmap.tobytes("png")
+
+            crop_path.write_bytes(crop_bytes)
+
+            checksum = _compute_checksum(crop_bytes)
+            manifest = {
+                "pdf_page": page,
+                "question_number": number,
+                "asset_type": asset_type,
+                "source_region": {
+                    "x": x,
+                    "y": y,
+                    "width": w,
+                    "height": h,
+                },
+                "output_file": crop_name,
+                "pixel_width": px_w,
+                "pixel_height": px_h,
+                "checksum": checksum,
+                "confidence": asset.get("confidence", "medium"),
+                "uncertainties": asset.get("uncertainties", []),
+            }
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            manifests.append(manifest)
+
+    return manifests
 
 
 def validate_page(extraction: Dict[str, Any], page: int, previous_numbers: Iterable[int]) -> Dict[str, Any]:
@@ -357,6 +731,11 @@ def validate_page(extraction: Dict[str, Any], page: int, previous_numbers: Itera
                 errors.append("%s.source_region must use normalized coordinates" % where)
         if answer is None:
             warnings.append("question %s has no authoritative answer" % number)
+
+    # Validate visual assets deterministically.
+    visual_errors = validate_visual_assets(extraction, page)
+    errors.extend(visual_errors)
+
     if numbers and numbers != sorted(numbers):
         errors.append("question order is not ascending")
     prior = list(previous_numbers)
@@ -433,6 +812,14 @@ def classify(validation: Dict[str, Any], verification: Optional[Dict[str, Any]],
                 findings.append(True)
     if question.get("correct_choice_index") is None or question.get("uncertainties"):
         findings.append(True)
+    # Visual assets with low confidence or uncertainties also flag for review.
+    for asset in question.get("visual_assets") or []:
+        if isinstance(asset, dict) and (
+            asset.get("confidence") == "low"
+            or asset.get("uncertainties")
+        ):
+            findings.append(True)
+            break
     return "YELLOW" if findings else "GREEN"
 
 
@@ -508,6 +895,20 @@ def write_review(results: List[PageResult], output: Path) -> Dict[str, int]:
             ])
             lines.extend("  - %s" % choice for choice in question.get("choices", []))
             lines.append("- Extraction uncertainties: %s" % ("; ".join(question.get("uncertainties", [])) or "none"))
+            # Visual assets summary.
+            visual_assets = question.get("visual_assets") or []
+            if visual_assets:
+                lines.append("- Visual assets: %d" % len(visual_assets))
+                for v_idx, v_asset in enumerate(visual_assets, 1):
+                    if isinstance(v_asset, dict):
+                        v_type = v_asset.get("type", "unknown")
+                        v_conf = v_asset.get("confidence", "?")
+                        v_uncert = v_asset.get("uncertainties", [])
+                        v_note = "; ".join(v_uncert) if v_uncert else "none"
+                        lines.append(
+                            "  - %s #%d (confidence: %s, uncertainties: %s)"
+                            % (v_type, v_idx, v_conf, v_note)
+                        )
             if answer_item:
                 prediction = answer_item.get("predicted_choice_index")
                 proposed = "unresolved" if prediction is None else str(prediction)
@@ -594,11 +995,15 @@ def _write_summary(
     calls: int,
     cached_pages: int,
     status: str,
+    pdf_pages_total: int = 0,
+    requested_pages: Optional[List[int]] = None,
 ) -> None:
     counts = write_review(results, output_root / "human_review" / "review.md")
     payload = {
         "source_pdf": str(pdf),
         "model": model,
+        "pdf_pages_total": pdf_pages_total,
+        "requested_pages": requested_pages,
         "pages_seen": pages_seen,
         "pages_completed": sum(1 for result in results if result.extracted),
         "gemini_calls": calls,
@@ -619,6 +1024,7 @@ def run(
     dpi: int = 180,
     client: Any = None,
     client_factory: Optional[Callable[[str], Any]] = None,
+    pages: Optional[Iterable[int]] = None,
 ) -> int:
     if genai is None or types is None:
         raise RuntimeError("google-genai is required; install it with `python -m pip install google-genai`")
@@ -635,16 +1041,32 @@ def run(
         "verification",
         "human_review",
         "human_verification",
+        "visual_assets",
     ):
         (output_root / name).mkdir(parents=True, exist_ok=True)
     pages_dir = output_root / "pages"
-    images = render_pages(pdf, pages_dir, dpi)
+
+    # Count total pages in the PDF for the summary.
+    pdf_pages_total = 0
+    if fitz is not None:
+        try:
+            with fitz.open(pdf) as doc:
+                pdf_pages_total = doc.page_count
+        except Exception:
+            pass
+
+    images = render_pages(pdf, pages_dir, dpi, pages)
+    requested_pages = sorted(pages) if pages is not None else None
     results: List[PageResult] = []
     previous_numbers: List[int] = []
     calls = 0
     cached_pages = 0
     status = "completed"
-    for page, image in enumerate(images, start=1):
+    for image in images:
+        match = re.fullmatch(r"page-(\d+)\.png", image.name)
+        if match is None:
+            raise ValueError("rendered page has unexpected filename: %s" % image.name)
+        page = int(match.group(1))
         result = PageResult(page=page)
         raw_path = output_root / "raw_extraction" / ("page-%03d.json" % page)
         validation_path = output_root / "validated_extraction" / ("page-%03d.json" % page)
@@ -665,7 +1087,7 @@ def run(
                 status = "quota_exhausted"
                 result.error = _error_text(exc)
                 results.append(result)
-                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                 build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
                 break
             except GeminiUnavailableError as exc:
@@ -677,7 +1099,7 @@ def run(
                 )
                 results.append(result)
                 build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
-                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                 continue
             except Exception as exc:
                 status = "completed_with_errors"
@@ -688,14 +1110,31 @@ def run(
                 )
                 results.append(result)
                 build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
-                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+                _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                 continue
+
+        if extracted is None:
+            continue
 
         validation = validate_page(extracted, page, previous_numbers)
         result.validation = validation
         validation_path.write_text(json.dumps(validation, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if validation["valid"]:
             previous_numbers.extend(validation["question_numbers"])
+
+            # Process visual assets (crop + manifest). Deterministic, no Gemini call.
+            try:
+                _crop_visual_assets(extracted, image, output_root, page)
+                result.visual_assets_processed = True
+                # Validate the crops we just produced.
+                crop_errors = validate_visual_asset_crops(output_root, extracted, page)
+                if crop_errors:
+                    validation["errors"].extend(crop_errors)
+                    validation["valid"] = False
+            except Exception as exc:
+                validation["errors"].append("visual asset processing failed: %s" % exc)
+                validation["valid"] = False
+
             answer_analysis = _cached_answer_analysis(answer_path, extracted, page)
             if answer_analysis is not None:
                 result.answer_analysis = answer_analysis
@@ -727,7 +1166,7 @@ def run(
                     status = "quota_exhausted"
                     result.error = _error_text(exc)
                     results.append(result)
-                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
                     break
                 except GeminiUnavailableError as exc:
@@ -737,6 +1176,8 @@ def run(
                         json.dumps({"pdf_page": page, "stage": "answer_analysis", "error": result.error}, indent=2) + "\n",
                         encoding="utf-8",
                     )
+                    results.append(result)
+                    continue
                 except Exception as exc:
                     status = "completed_with_errors"
                     result.error = _error_text(exc)
@@ -744,6 +1185,8 @@ def run(
                         json.dumps({"pdf_page": page, "stage": "answer_analysis", "error": result.error}, indent=2) + "\n",
                         encoding="utf-8",
                     )
+                    results.append(result)
+                    continue
             verification = _cached_verification(verification_path, page)
             if verification is not None:
                 result.verification = verification
@@ -757,7 +1200,7 @@ def run(
                     status = "quota_exhausted"
                     result.error = _error_text(exc)
                     results.append(result)
-                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
                     break
                 except GeminiUnavailableError as exc:
@@ -767,14 +1210,18 @@ def run(
                         json.dumps({"pdf_page": page, "stage": "verification", "error": result.error}, indent=2) + "\n",
                         encoding="utf-8",
                     )
+                    results.append(result)
+                    continue
                 except Exception as exc:
                     status = "completed_with_errors"
                     result.error = _error_text(exc)
+                    results.append(result)
+                    continue
         else:
             result.verification = {"pdf_page": page, "questions": [], "skipped": "deterministic validation failed"}
         results.append(result)
         build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
-        _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status)
+        _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
     return 0
 
 
@@ -784,12 +1231,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--output", type=Path, default=Path("tools/content_pipeline/output/formal_exam"))
     parser.add_argument("--model", default=os.environ.get("GEMINI_MODEL"))
     parser.add_argument("--dpi", type=int, default=180)
+    parser.add_argument(
+        "--pages",
+        type=parse_page_selection,
+        help="PDF pages to process, e.g. 1 or 1,3-4 (default: all pages)",
+    )
     args = parser.parse_args(argv)
     if not args.model:
         parser.error("GEMINI_MODEL is not set and --model was not supplied")
     if not args.pdf.exists():
         parser.error("PDF does not exist: %s" % args.pdf)
-    return run(args.pdf, args.output, args.model, args.dpi)
+    return run(args.pdf, args.output, args.model, args.dpi, pages=args.pages)
 
 
 if __name__ == "__main__":

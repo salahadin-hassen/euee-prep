@@ -30,11 +30,13 @@ Run the real scanned-paper workflow:
 ```
 python tools/content_pipeline/ai_extraction.py `
   --pdf test/fixtures/formal_exam.pdf `
-  --output tools/content_pipeline/output/formal_exam
+  --output tools/content_pipeline/output/formal_exam `
+  --pages 1
 ```
 
-The runner renders every page, makes one structured extraction request per
-page, validates before verification, and writes artifacts after each page.
+The runner renders selected pages (or every page when `--pages` is omitted),
+makes one structured extraction request per page, validates before verification,
+and writes artifacts after each page.
 Verification is page-targeted and never rewrites extraction data. Handwritten
 or circled marks are not treated as answer keys. If authoritative answers are
 absent, the output is a blocked candidate because the v2 production contract
@@ -50,6 +52,51 @@ validated page, not one request per question. Its `ai_solution` predictions are
 never copied into `correct_choice_index`; only an explicit source answer key or
 separate human verification can support production authoring. Human decisions
 are stored under `human_verification/` without overwriting AI analysis.
+
+### Visual assets
+
+The extraction pipeline can identify visual regions (diagrams, figures, graphs,
+tables, images) that belong to individual questions. This is a research-stage
+feature that does **not** yet populate production content-pack fields
+(`image_reference`, `diagram_reference`, etc.).
+
+When a question includes visual assets in its extraction output, the pipeline:
+
+1. **Crops** each region from the original page PNG using PyMuPDF, producing
+   files like `page-001-question-003-graph-01.png` under `visual_assets/`.
+2. **Writes a manifest** per crop (`.manifest.json`) with metadata: page number,
+   question number, asset type, source region, pixel dimensions, checksum, and
+   uncertainty notes.
+3. **Validates deterministically**: coordinates must be in [0,1], bounding boxes
+   must have positive area, crops must be non-trivial (>100 bytes), and checksums
+   must match the file contents.
+4. **Reuses existing crops** on resume: if a valid crop+manifest already exists
+   for a given question/asset, it is skipped rather than regenerated.
+5. **Does not affect classification**: visual assets themselves do not change
+   a question's GREEN/YELLOW/RED status. However, low confidence or explicit
+   uncertainties in a visual asset cause YELLOW classification.
+
+Asset types: `image` (photos, illustrations), `graph` (charts, plots),
+`diagram` (technical diagrams), `table` (tabular data), `figure` (numbered
+figures).
+
+Generated artifacts directory structure:
+
+```
+output/
+  raw_extraction/          # raw Gemini JSON per page
+  validated_extraction/    # deterministic validation results
+  answer_analysis/         # AI-solved answers per page
+  verification/            # Gemini verification per page
+  visual_assets/           # crop files + manifests
+    page-001-question-001-image-01.png
+    page-001-question-001-image-01.png.manifest.json
+  human_verification/      # human review decisions
+  human_review/            # review.md report
+  pages/                   # rendered page PNGs
+  run_summary.json         # run metadata
+  content_pack_candidate_blocked.json
+```
 
 ## Validate a pack
 
