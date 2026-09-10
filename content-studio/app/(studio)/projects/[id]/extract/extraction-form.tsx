@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageSelectionError, parsePageSelection } from "@/lib/extraction/page-selection";
@@ -25,12 +25,40 @@ async function hasPdfSignature(file: File): Promise<boolean> {
   return new TextDecoder().decode(bytes) === "%PDF-";
 }
 
+async function detectPdfPageCount(file: File): Promise<number | null> {
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    const buffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buffer, useSystemFonts: true }).promise;
+    const count = doc.numPages;
+    doc.destroy();
+    return count;
+  } catch {
+    return null;
+  }
+}
+
 export function ExtractionForm({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [pageInput, setPageInput] = useState("1");
+  const [detectedPages, setDetectedPages] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const onFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0] ?? null;
+    setFile(selected);
+    setDetectedPages(null);
+    if (selected && selected.type === "application/pdf") {
+      const count = await detectPdfPageCount(selected);
+      if (count && count > 0) {
+        setDetectedPages(count);
+        setPageInput(`1-${count}`);
+      }
+    }
+  }, []);
 
   async function submit() {
     setError(null);
@@ -97,6 +125,8 @@ export function ExtractionForm({ projectId }: { projectId: string }) {
       }
 
       setFile(null);
+      setPageInput("1");
+      setDetectedPages(null);
       router.refresh();
     } finally {
       setPending(false);
@@ -109,7 +139,7 @@ export function ExtractionForm({ projectId }: { projectId: string }) {
         <h2>Prepare extraction</h2>
       </div>
       <p className="empty" style={{ marginBottom: 16 }}>
-        Upload a private exam PDF and choose the pages to process later. No extraction worker is connected yet.
+        Upload a PDF and all pages will be queued automatically. The extraction worker processes jobs within minutes.
       </p>
       <div className="form">
         <label>
@@ -117,11 +147,11 @@ export function ExtractionForm({ projectId }: { projectId: string }) {
           <input
             type="file"
             accept="application/pdf,.pdf"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={onFileChange}
             disabled={pending}
           />
         </label>
-        {file && <p className="project-meta">{file.name} · {formatBytes(file.size)}</p>}
+        {file && <p className="project-meta">{file.name} · {formatBytes(file.size)}{detectedPages ? ` · ${detectedPages} pages detected` : ""}</p>}
         <label>
           Pages
           <input
@@ -132,10 +162,10 @@ export function ExtractionForm({ projectId }: { projectId: string }) {
             disabled={pending}
           />
         </label>
-        <p className="project-meta">Use comma-separated pages and ranges. Pages must be positive and unique.</p>
+        <p className="project-meta">All pages are selected by default. Adjust if you only need specific pages.</p>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="button" type="button" onClick={submit} disabled={pending}>
-          {pending ? "Uploading..." : "Upload and queue extraction"}
+          {pending ? "Uploading..." : "Upload and extract"}
         </button>
       </div>
     </section>
