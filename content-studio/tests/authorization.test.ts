@@ -47,7 +47,7 @@ describe("role boundaries", () => {
 describe("proxy route protection", () => {
   it("defines protected route prefixes in proxy matcher", () => {
     const proxySource = readFileSync(resolve(process.cwd(), "proxy.ts"), "utf8");
-    const protectedRoutes = ["/admin", "/reviewer", "/projects", "/assignments", "/dashboard"];
+    const protectedRoutes = ["/admin", "/reviewer", "/projects"];
     for (const route of protectedRoutes) {
       assert.ok(
         proxySource.includes(route),

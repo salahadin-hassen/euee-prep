@@ -23,8 +23,8 @@ export default function NotFound() {
           Maybe it was moved, maybe it never was. Either way, there&apos;s nothing here.
         </p>
         <div className="btn-stack" style={{ justifyContent: "center" }}>
-          <Link className="button" href="/dashboard">
-            Back to dashboard
+          <Link className="button" href="/projects">
+            Back to papers
           </Link>
           <Link className="button" href="/" style={{ background: "var(--muted)" }}>
             Go home
