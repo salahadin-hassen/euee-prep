@@ -7,9 +7,9 @@ import { markNotificationsRead, markAllRead } from "@/app/(studio)/_actions/noti
 
 const KIND_LABELS: Record<string, string> = {
   extraction_started: "Extraction started",
-  extraction_completed: "Extraction completed",
+  extraction_completed: "Extraction complete",
   extraction_failed: "Extraction failed",
-  extraction_issues: "Extraction had issues",
+  extraction_issues: "Extraction completed with issues",
 };
 
 function timeAgo(dateStr: string): string {
@@ -57,6 +57,17 @@ export function NotificationBell({ initialNotifications, initialUnread }: {
     setUnread(0);
   }, []);
 
+  function handleNotificationClick(n: NotificationRow) {
+    if (!n.read) markRead([n.id]);
+    setOpen(false);
+    // Deep-link: completion notifications go to review, others to paper
+    if (n.kind === "extraction_completed" || n.kind === "extraction_issues") {
+      router.push(`/projects/${n.project_id}/review`);
+    } else {
+      router.push(`/projects/${n.project_id}`);
+    }
+  }
+
   return (
     <div className="notification-bell" ref={ref}>
       <button
@@ -91,14 +102,10 @@ export function NotificationBell({ initialNotifications, initialUnread }: {
                   key={n.id}
                   className={`dropdown-item ${n.read ? "" : "unread"}`}
                   type="button"
-                  onClick={() => {
-                    if (!n.read) markRead([n.id]);
-                    setOpen(false);
-                    router.push(`/projects/${n.project_id}`);
-                  }}
+                  onClick={() => handleNotificationClick(n)}
                 >
                   <div className="item-title">{KIND_LABELS[n.kind] ?? n.kind}</div>
-                  <div className="item-body">{n.title}</div>
+                  <div className="item-body">{n.title} &mdash; {n.body}</div>
                   <div className="item-time">{timeAgo(n.created_at)}</div>
                 </button>
               ))}

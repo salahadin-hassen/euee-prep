@@ -16,13 +16,25 @@ export function friendlyStatus(status: string): string {
 const JOB_STATUS_LABELS: Record<string, string> = {
   queued: "Queued",
   processing: "Processing",
-  completed: "Done",
-  completed_with_errors: "Done (some errors)",
+  completed: "Ready for review",
+  completed_with_errors: "Completed with issues",
   quota_exhausted: "Quota exhausted",
-  failed: "Failed",
+  failed: "Extraction failed",
   cancelled: "Cancelled",
 };
 
 export function friendlyJobStatus(status: string): string {
   return JOB_STATUS_LABELS[status] ?? status;
+}
+
+export function jobStatusIcon(status: string): string {
+  switch (status) {
+    case "queued": return "\u25CB";
+    case "processing": return "\u25CC";
+    case "completed": return "\u2713";
+    case "completed_with_errors": return "\u26A0";
+    case "failed": return "\u2717";
+    case "cancelled": return "\u2716";
+    default: return "\u25CB";
+  }
 }

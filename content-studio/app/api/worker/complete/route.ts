@@ -23,35 +23,62 @@ export async function POST(request: NextRequest) {
     });
     if (error) return NextResponse.json({ error: "Could not complete job" }, { status: 409 });
 
-    // Create completion notification for the job creator
+    // Promote staged extraction questions into reviewable questions
+    const { data: promoted } = await supabase.rpc("promote_extraction_questions", {
+      p_job_id: body.job_id,
+    });
+    const promotedCount = (promoted as number) ?? 0;
+
+    // Create completion notification (idempotent: check existing)
     if (jobBefore) {
-      const finalStatus = data as string;
-      const kind = finalStatus === "completed" ? "extraction_completed"
-        : finalStatus === "completed_with_errors" ? "extraction_issues"
-        : "extraction_failed";
+      const { data: existingNotification } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("job_id", body.job_id)
+        .in("kind", ["extraction_completed", "extraction_issues", "extraction_failed"])
+        .limit(1)
+        .maybeSingle();
 
-      const totalPages = Array.isArray(jobBefore.requested_pages) ? jobBefore.requested_pages.length : 0;
-      const bodyText = finalStatus === "completed"
-        ? `All ${totalPages} page${totalPages !== 1 ? "s" : ""} extracted successfully`
-        : `${jobBefore.completed_pages} of ${totalPages} pages completed, ${jobBefore.failed_pages} failed`;
+      if (!existingNotification) {
+        const finalStatus = data as string;
+        const kind = finalStatus === "completed" ? "extraction_completed"
+          : finalStatus === "completed_with_errors" ? "extraction_issues"
+          : "extraction_failed";
 
-      const { data: projectRow } = await supabase
-        .from("projects")
-        .select("title")
-        .eq("id", jobBefore.project_id)
-        .single();
+        const totalPages = Array.isArray(jobBefore.requested_pages) ? jobBefore.requested_pages.length : 0;
 
-      await supabase.rpc("create_notification", {
-        p_user_id: jobBefore.created_by,
-        p_project_id: jobBefore.project_id,
-        p_job_id: body.job_id,
-        p_kind: kind,
-        p_title: projectRow?.title ?? "Paper",
-        p_body: bodyText,
-      });
+        const { data: projectRow } = await supabase
+          .from("projects")
+          .select("title")
+          .eq("id", jobBefore.project_id)
+          .single();
+
+        const titleText = projectRow?.title ?? "Paper";
+        let bodyText: string;
+        if (finalStatus === "completed") {
+          bodyText = promotedCount > 0
+            ? `${promotedCount} question${promotedCount !== 1 ? "s" : ""} ready for review`
+            : `All ${totalPages} page${totalPages !== 1 ? "s" : ""} extracted successfully`;
+        } else if (finalStatus === "completed_with_errors") {
+          bodyText = promotedCount > 0
+            ? `${promotedCount} question${promotedCount !== 1 ? "s" : ""} ready; ${jobBefore.failed_pages} page${jobBefore.failed_pages !== 1 ? "s" : ""} failed`
+            : `${jobBefore.completed_pages} of ${totalPages} pages completed, ${jobBefore.failed_pages} failed`;
+        } else {
+          bodyText = `${titleText} could not be processed`;
+        }
+
+        await supabase.rpc("create_notification", {
+          p_user_id: jobBefore.created_by,
+          p_project_id: jobBefore.project_id,
+          p_job_id: body.job_id,
+          p_kind: kind,
+          p_title: titleText,
+          p_body: bodyText,
+        });
+      }
     }
 
-    return NextResponse.json({ status: data });
+    return NextResponse.json({ status: data, promoted: promotedCount });
   } catch {
     return NextResponse.json({ error: "Invalid worker request" }, { status: 400 });
   }

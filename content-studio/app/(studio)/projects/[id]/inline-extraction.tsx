@@ -38,16 +38,6 @@ async function detectPdfPageCount(file: File): Promise<number | null> {
   }
 }
 
-const JOB_LABELS: Record<string, string> = {
-  queued: "Queued",
-  processing: "Processing",
-  completed: "Done",
-  completed_with_errors: "Done (some errors)",
-  quota_exhausted: "Quota exhausted",
-  failed: "Failed",
-  cancelled: "Cancelled",
-};
-
 interface Job {
   id: string;
   source_document_id: string;
@@ -58,6 +48,118 @@ interface Job {
   failed_pages: number;
   created_at: string;
   completed_at: string | null;
+}
+
+function ExtractionJobRow({
+  job,
+  projectId,
+  canCancel,
+  cancellingId,
+  onCancel,
+}: {
+  job: Job;
+  projectId: string;
+  canCancel: boolean;
+  cancellingId: string | null;
+  onCancel: (jobId: string) => void;
+}) {
+  const isActive = job.status === "queued" || job.status === "processing";
+  const isComplete = job.status === "completed";
+  const hasIssues = job.status === "completed_with_errors";
+  const isFailed = job.status === "failed";
+
+  const totalPages = job.requested_pages.length;
+
+  return (
+    <div className="extraction-job">
+      {isActive && (
+        <div className="extraction-status extraction-processing">
+          <span className="extraction-icon" aria-hidden="true">{"\u25CC"}</span>
+          <div>
+            <div className="extraction-status-text">Processing</div>
+            <div className="extraction-status-detail">
+              {job.completed_pages} / {totalPages} pages
+              {job.failed_pages > 0 && <>, {job.failed_pages} failed</>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isComplete && (
+        <div className="extraction-status extraction-complete">
+          <span className="extraction-icon" aria-hidden="true">{"\u2713"}</span>
+          <div>
+            <div className="extraction-status-text">Ready for review</div>
+            <div className="extraction-status-detail">
+              All {totalPages} page{totalPages !== 1 ? "s" : ""} extracted
+            </div>
+          </div>
+          <a className="button button-sm" href={`/projects/${projectId}/review`}>
+            Review questions {"\u2192"}
+          </a>
+        </div>
+      )}
+
+      {hasIssues && (
+        <div className="extraction-status extraction-issues">
+          <span className="extraction-icon" aria-hidden="true">{"\u26A0"}</span>
+          <div>
+            <div className="extraction-status-text">Completed with issues</div>
+            <div className="extraction-status-detail">
+              {job.completed_pages} of {totalPages} pages succeeded, {job.failed_pages} failed
+            </div>
+          </div>
+          <a className="button button-sm" href={`/projects/${projectId}/review`}>
+            Review questions
+          </a>
+        </div>
+      )}
+
+      {isFailed && (
+        <div className="extraction-status extraction-failed">
+          <span className="extraction-icon" aria-hidden="true">{"\u2717"}</span>
+          <div>
+            <div className="extraction-status-text">Extraction failed</div>
+            <div className="extraction-status-detail">
+              We couldn&apos;t finish processing this paper.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {job.status === "queued" && (
+        <div className="extraction-status extraction-queued">
+          <span className="extraction-icon" aria-hidden="true">{"\u25CB"}</span>
+          <div>
+            <div className="extraction-status-text">Queued</div>
+            <div className="extraction-status-detail">
+              Waiting to start...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(job.status === "cancelled") && (
+        <div className="extraction-status extraction-cancelled">
+          <span className="extraction-icon" aria-hidden="true">{"\u2716"}</span>
+          <div>
+            <div className="extraction-status-text">Cancelled</div>
+          </div>
+        </div>
+      )}
+
+      {isActive && canCancel && (
+        <button
+          className="signout"
+          type="button"
+          onClick={() => onCancel(job.id)}
+          disabled={cancellingId === job.id}
+        >
+          {cancellingId === job.id ? "Cancelling..." : "Cancel"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function InlineExtraction({
@@ -150,7 +252,8 @@ export function InlineExtraction({
 
       setFile(null);
       setDetectedPages(null);
-      setSuccess("Extraction started. The worker will process it automatically.");
+      setSuccess("Extraction started");
+      setTimeout(() => setSuccess(null), 4000);
       router.refresh();
     } finally {
       setPending(false);
@@ -165,6 +268,7 @@ export function InlineExtraction({
   }
 
   const activeJobs = jobs.filter((j) => j.status === "queued" || j.status === "processing");
+  const hasActiveJobs = activeJobs.length > 0;
 
   return (
     <section className="panel">
@@ -186,47 +290,38 @@ export function InlineExtraction({
           {file && (
             <p className="project-meta">
               {file.name} &middot; {formatBytes(file.size)}
-              {detectedPages ? ` · ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : ""}
+              {detectedPages ? ` \u00B7 ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : ""}
             </p>
           )}
           {error && <p className="error" role="alert">{error}</p>}
-          {success && <p className="success" role="status">{success}</p>}
+          {success && (
+            <p className="success" role="status">
+              {"\u2713"} {success}
+            </p>
+          )}
           <button className="button" type="button" onClick={submit} disabled={pending}>
-            {pending ? "Starting…" : detectedPages ? `Extract ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : "Extract"}
+            {pending ? "\u25CC Starting\u2026" : detectedPages ? `Extract ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : "Extract"}
           </button>
         </div>
       )}
 
-      {activeJobs.length > 0 && (
-        <p className="project-meta" style={{ marginTop: 12 }}>
-          Processing in background — you can leave this page.
+      {hasActiveJobs && (
+        <p className="project-meta extraction-hint" style={{ marginTop: 12 }}>
+          Processing in the background. You can leave this page.
         </p>
       )}
 
       {jobs.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="extraction-jobs">
           {jobs.map((job) => (
-            <div key={job.id} className="project-row">
-              <div>
-                <div className="project-meta">
-                  Pages {job.requested_pages.join(", ")} &middot; {job.completed_pages}/{job.requested_pages.length}
-                  {job.failed_pages > 0 && <>, {job.failed_pages} failed</>}
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge">{JOB_LABELS[job.status] ?? job.status}</span>
-                {(job.status === "queued" || job.status === "processing") && (
-                  <button
-                    className="signout"
-                    type="button"
-                    onClick={() => cancel(job.id)}
-                    disabled={cancellingId === job.id}
-                  >
-                    {cancellingId === job.id ? "…" : "Cancel"}
-                  </button>
-                )}
-              </div>
-            </div>
+            <ExtractionJobRow
+              key={job.id}
+              job={job}
+              projectId={projectId}
+              canCancel={canUpload}
+              cancellingId={cancellingId}
+              onCancel={cancel}
+            />
           ))}
         </div>
       )}

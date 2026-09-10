@@ -41,6 +41,58 @@ function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
+function ExtractionSummary({ jobs }: { jobs: ExtractJob[] }) {
+  const latest = jobs[0];
+  if (!latest) return null;
+
+  const isActive = latest.status === "queued" || latest.status === "processing";
+  const isComplete = latest.status === "completed";
+  const hasIssues = latest.status === "completed_with_errors";
+  const isFailed = latest.status === "failed";
+
+  if (isActive) {
+    return (
+      <div className="extraction-summary extraction-summary--processing">
+        <span className="extraction-summary-icon" aria-hidden="true">{"\u25CC"}</span>
+        <span>
+          Extracting {latest.completed_pages} / {latest.requested_pages.length} pages
+        </span>
+      </div>
+    );
+  }
+
+  if (isComplete) {
+    return (
+      <div className="extraction-summary extraction-summary--ready">
+        <span className="extraction-summary-icon" aria-hidden="true">{"\u2713"}</span>
+        <span>Ready for review</span>
+      </div>
+    );
+  }
+
+  if (hasIssues) {
+    return (
+      <div className="extraction-summary extraction-summary--issues">
+        <span className="extraction-summary-icon" aria-hidden="true">{"\u26A0"}</span>
+        <span>
+          Completed with issues ({latest.completed_pages} of {latest.requested_pages.length} pages)
+        </span>
+      </div>
+    );
+  }
+
+  if (isFailed) {
+    return (
+      <div className="extraction-summary extraction-summary--failed">
+        <span className="extraction-summary-icon" aria-hidden="true">{"\u2717"}</span>
+        <span>Extraction failed</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default async function PaperDetailPage({
   params,
 }: {
@@ -107,6 +159,8 @@ export default async function PaperDetailPage({
       .order("created_at", { ascending: false }),
   ]);
 
+  const jobs = (extractionJobs ?? []) as ExtractJob[];
+
   return (
     <main className="content">
       <div className="paper-header">
@@ -145,14 +199,18 @@ export default async function PaperDetailPage({
       {hasQuestions && typed.status !== "approved" && (
         <div className="paper-actions">
           <Link className="button" href={`/projects/${id}/review`}>
-            Review questions
+            Review questions {"\u2192"}
           </Link>
         </div>
       )}
 
+      {!hasQuestions && jobs.length > 0 && (
+        <ExtractionSummary jobs={jobs} />
+      )}
+
       <InlineExtraction
         projectId={typed.id}
-        jobs={(extractionJobs ?? []) as ExtractJob[]}
+        jobs={jobs}
         canUpload={canUploadSource}
       />
 
