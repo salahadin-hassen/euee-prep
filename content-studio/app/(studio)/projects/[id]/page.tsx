@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
 import { InviteForm } from "./invite-form";
+import { approveProject } from "../../_actions/approval";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,21 @@ export default async function PaperDetailPage({
           <p className="empty">
             Every question has been verified. This paper is ready.
           </p>
+        </section>
+      )}
+
+      {isAdmin && typed.status === "ready_for_approval" && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Ready for approval</h2>
+          </div>
+          <p className="empty" style={{ marginBottom: 16 }}>
+            Every question is verified. Approval checks the complete paper atomically.
+          </p>
+          <form action={approveProject}>
+            <input type="hidden" name="project_id" value={typed.id} />
+            <button className="button" type="submit">Approve paper</button>
+          </form>
         </section>
       )}
 

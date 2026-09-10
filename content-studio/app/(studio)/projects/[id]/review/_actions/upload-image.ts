@@ -7,6 +7,22 @@ export type UploadImageState = {
   image_path: string | null;
 };
 
+function hasSignature(bytes: Uint8Array, type: string): boolean {
+  if (type === "image/png") {
+    return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => bytes[index] === value);
+  }
+  if (type === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (type === "image/gif") {
+    return new TextDecoder().decode(bytes.slice(0, 6)) === "GIF87a" || new TextDecoder().decode(bytes.slice(0, 6)) === "GIF89a";
+  }
+  if (type === "image/webp") {
+    return new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP";
+  }
+  return false;
+}
+
 export async function uploadQuestionImage(
   _prev: UploadImageState,
   formData: FormData,
@@ -32,19 +48,27 @@ export async function uploadQuestionImage(
     return { error: "Image must be under 5MB.", image_path: null };
   }
 
-  // Delete any existing image for this question first.
-  const { data: existing } = await supabase
+  const { data: existing, error: questionError } = await supabase
     .from("questions")
-    .select("image_path")
+    .select("project_id, image_path")
     .eq("id", questionId)
     .single();
+  if (questionError || !existing) return { error: "Question not found or inaccessible.", image_path: null };
+  if (existing.project_id !== projectId) return { error: "Question does not belong to this paper.", image_path: null };
 
-  if (existing?.image_path) {
-    await supabase.storage.from("question-images").remove([existing.image_path]);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!hasSignature(bytes, file.type)) {
+    return { error: "The file content does not match its image type.", image_path: null };
   }
 
-  // Build the storage path: {project_id}/{question_id}/{original_filename}
-  const ext = file.name.split(".").pop() || "png";
+  // Use a server-generated bounded filename, never the client filename.
+  const extByType: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+  };
+  const ext = extByType[file.type];
   const storagePath = `${projectId}/${questionId}/${crypto.randomUUID()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
@@ -53,16 +77,22 @@ export async function uploadQuestionImage(
 
   if (uploadError) return { error: `Upload failed: ${uploadError.message}`, image_path: null };
 
-  // Update the question's image_path.
-  const { error: updateError } = await supabase
-    .from("questions")
-    .update({ image_path: storagePath })
-    .eq("id", questionId);
+  const { data: oldPath, error: updateError } = await supabase.rpc("set_question_image_path", {
+    p_question_id: questionId,
+    p_project_id: projectId,
+    p_image_path: storagePath,
+  });
 
   if (updateError) {
     // Clean up the uploaded file if the DB update fails.
     await supabase.storage.from("question-images").remove([storagePath]);
     return { error: `Failed to save: ${updateError.message}`, image_path: null };
+  }
+
+  // The new reference is committed. Removing the old object is now safe; if
+  // cleanup fails, it is unreferenced and can be removed by a later job.
+  if (oldPath) {
+    await supabase.storage.from("question-images").remove([oldPath]);
   }
 
   return { error: null, image_path: storagePath };
@@ -75,21 +105,21 @@ export async function removeQuestionImage(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const { data: existing } = await supabase
+  const { data: existing, error: questionError } = await supabase
     .from("questions")
-    .select("image_path")
+    .select("project_id, image_path")
     .eq("id", questionId)
     .single();
 
-  if (!existing?.image_path) return { error: null };
+  if (questionError || !existing) return { error: "Question not found or inaccessible." };
+  if (!existing.image_path) return { error: null };
 
-  await supabase.storage.from("question-images").remove([existing.image_path]);
-
-  const { error } = await supabase
-    .from("questions")
-    .update({ image_path: null })
-    .eq("id", questionId);
-
+  const { data: oldPath, error } = await supabase.rpc("set_question_image_path", {
+    p_question_id: questionId,
+    p_project_id: existing.project_id,
+    p_image_path: null,
+  });
   if (error) return { error: `Failed to remove: ${error.message}` };
+  if (oldPath) await supabase.storage.from("question-images").remove([oldPath]);
   return { error: null };
 }

@@ -1,0 +1,6 @@
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\SAHELION\Downloads\euee_prep\content-studio\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\SAHELION\Downloads\euee_prep\content-studio\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+Error: Error: invalid type: boolean `false`, expected enum CodeFrameColorMode
+    at ignore-listed frames
+Error: Error: invalid type: boolean `false`, expected enum CodeFrameColorMode
+    at ignore-listed frames

@@ -70,28 +70,22 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
     if (regularUserId) await serviceClient.auth.admin.deleteUser(regularUserId);
   });
 
-  it("admin can insert a draft project", async () => {
-    const { data, error } = await adminClient
-      .from("projects")
-      .insert({
-        title: "Integration Test Project",
-        exam_year: 2025,
-        subject: "Mathematics",
-        stream: "natural_science",
-        status: "draft",
-        created_by: adminUserId,
-      })
-      .select("id")
-      .single();
+  it("admin can create a draft project through the RPC", async () => {
+    const { data, error } = await adminClient.rpc("create_project", {
+      p_title: "Integration Test Project",
+      p_exam_year: 2025,
+      p_subject: "Mathematics",
+      p_stream: "natural_science",
+    });
 
     assert.equal(error, null, `Insert failed: ${error?.message}`);
-    assert.ok(data?.id, "Project should have an id");
-    createdProjectIds.push(data!.id);
+    assert.ok(data, "Project should have an id");
+    createdProjectIds.push(data);
 
     const { data: fetched } = await serviceClient
       .from("projects")
       .select("id, title, status, created_by")
-      .eq("id", data!.id)
+      .eq("id", data)
       .single();
 
     assert.equal(fetched?.title, "Integration Test Project");
@@ -99,18 +93,8 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
     assert.equal(fetched?.created_by, adminUserId);
   });
 
-  it("admin can insert into project_members", async () => {
+  it("project creation atomically adds the creator as an admin member", async () => {
     const projectId = createdProjectIds[0];
-
-    const { error } = await adminClient
-      .from("project_members")
-      .insert({
-        project_id: projectId,
-        user_id: adminUserId,
-        role: "admin",
-      });
-
-    assert.equal(error, null, `Member insert failed: ${error?.message}`);
 
     const { data: member } = await serviceClient
       .from("project_members")
@@ -122,7 +106,22 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
     assert.equal(member?.role, "admin");
   });
 
-  it("admin can insert into audit_events", async () => {
+  it("project creation writes the canonical audit event", async () => {
+    const projectId = createdProjectIds[0];
+
+    const { data: auditRow, error } = await serviceClient
+      .from("audit_events")
+      .select("action, entity_type, entity_id")
+      .eq("entity_id", projectId)
+      .eq("action", "project.created")
+      .single();
+
+    assert.equal(error, null, `Audit read failed: ${error?.message}`);
+    assert.equal(auditRow?.action, "project.created");
+    assert.equal(auditRow?.entity_type, "project");
+  });
+
+  it("even admins cannot insert audit events directly", async () => {
     const projectId = createdProjectIds[0];
 
     const { error } = await adminClient
@@ -135,17 +134,7 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
         metadata: { title: "Integration Test Project" },
       });
 
-    assert.equal(error, null, `Audit insert failed: ${error?.message}`);
-
-    const { data: auditRow } = await serviceClient
-      .from("audit_events")
-      .select("action, entity_type, entity_id")
-      .eq("entity_id", projectId)
-      .eq("action", "project.created")
-      .single();
-
-    assert.equal(auditRow?.action, "project.created");
-    assert.equal(auditRow?.entity_type, "project");
+    assert.ok(error, "Direct audit insert should fail");
   });
 
   it("non-admin cannot insert into audit_events (RLS enforced)", async () => {
@@ -186,16 +175,14 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
     );
   });
 
-  it("admin can assign a reviewer to a project", async () => {
+  it("admin can assign a reviewer through the RPC", async () => {
     const projectId = createdProjectIds[0];
 
-    const { error } = await adminClient
-      .from("project_members")
-      .insert({
-        project_id: projectId,
-        user_id: regularUserId,
-        role: "reviewer",
-      });
+    const { error } = await adminClient.rpc("assign_project_member", {
+      p_project_id: projectId,
+      p_user_id: regularUserId,
+      p_role: "reviewer",
+    });
 
     assert.equal(error, null, `Reviewer assign failed: ${error?.message}`);
 
@@ -240,13 +227,11 @@ describe("create-project integration", { skip: !hasEnv() ? "Missing TEST_SUPABAS
   it("duplicate assignment returns constraint violation", async () => {
     const projectId = createdProjectIds[0];
 
-    const { error } = await adminClient
-      .from("project_members")
-      .insert({
-        project_id: projectId,
-        user_id: regularUserId,
-        role: "uploader",
-      });
+    const { error } = await adminClient.rpc("assign_project_member", {
+      p_project_id: projectId,
+      p_user_id: regularUserId,
+      p_role: "uploader",
+    });
 
     assert.ok(error, "Duplicate assignment should fail");
     assert.equal(error!.code, "23505", `Expected unique violation, got code: ${error!.code}`);

@@ -20,24 +20,12 @@ export async function flagQuestion(
   const flagNote = (formData.get("flag_note") as string) || "";
   if (!questionId || !projectId) return { error: "Missing question or project.", done: false };
 
-  const { error } = await supabase
-    .from("questions")
-    .update({
-      status: "flagged",
-      flag_note: flagNote,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", questionId);
+  const { error } = await supabase.rpc("flag_question", {
+    p_question_id: questionId,
+    p_flag_note: flagNote,
+  });
 
   if (error) return { error: `Failed to flag: ${error.message}`, done: false };
-
-  await supabase.from("audit_events").insert({
-    actor_id: user.id,
-    action: "question.flagged",
-    entity_type: "question",
-    entity_id: questionId,
-    metadata: { project_id: projectId, note: flagNote },
-  });
 
   return { error: null, done: true };
 }

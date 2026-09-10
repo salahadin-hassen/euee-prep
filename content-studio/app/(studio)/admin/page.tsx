@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || !canAccessAdminSurface(profile.role as AppRole)) redirect("/reviewer");
 
   const { data: projectRows } = await supabase
     .from("projects")

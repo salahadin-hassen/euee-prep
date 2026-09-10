@@ -31,13 +31,11 @@ export async function inviteHelper(
 
   const target = candidates[0];
 
-  const { error: insertError } = await supabase
-    .from("project_members")
-    .insert({
-      project_id: projectId,
-      user_id: target.id,
-      role: "reviewer",
-    });
+  const { error: insertError } = await supabase.rpc("assign_project_member", {
+    p_project_id: projectId,
+    p_user_id: target.id,
+    p_role: "reviewer",
+  });
 
   if (insertError) {
     if (insertError.code === "23505") {
@@ -45,14 +43,6 @@ export async function inviteHelper(
     }
     return { error: `Couldn't add them: ${insertError.message}`, success: false };
   }
-
-  await supabase.from("audit_events").insert({
-    actor_id: user.id,
-    action: "member.invited",
-    entity_type: "project",
-    entity_id: projectId,
-    metadata: { invited_user_id: target.id, invited_name: target.display_name },
-  });
 
   return { error: null, success: true };
 }

@@ -57,48 +57,16 @@ export async function createProject(
     return { error: "Stream must be natural science or social science." };
   }
 
-  const { data: project, error: insertError } = await supabase
-    .from("projects")
-    .insert({
-      title: title.trim(),
-      exam_year: parsedYear,
-      subject: subject.trim(),
-      stream,
-      status: "draft",
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  const { data: projectId, error } = await supabase.rpc("create_project", {
+    p_title: title.trim(),
+    p_exam_year: parsedYear,
+    p_subject: subject.trim(),
+    p_stream: stream,
+  });
 
-  if (insertError) {
-    return { error: `Failed to create project: ${insertError.message}` };
+  if (error || !projectId) {
+    return { error: `Failed to create project: ${error?.message ?? "No project was created."}` };
   }
 
-  const { error: memberError } = await supabase
-    .from("project_members")
-    .insert({
-      project_id: project.id,
-      user_id: user.id,
-      role: "admin",
-    });
-
-  if (memberError) {
-    return { error: `Project created but failed to add you as member: ${memberError.message}` };
-  }
-
-  const { error: auditError } = await supabase
-    .from("audit_events")
-    .insert({
-      actor_id: user.id,
-      action: "project.created",
-      entity_type: "project",
-      entity_id: project.id,
-      metadata: { title: title.trim(), subject: subject.trim(), stream },
-    });
-
-  if (auditError) {
-    return { error: `Project created but audit log failed: ${auditError.message}` };
-  }
-
-  redirect(`/projects/${project.id}`);
+  redirect(`/projects/${projectId}`);
 }

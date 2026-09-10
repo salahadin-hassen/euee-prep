@@ -32,16 +32,13 @@ export async function editQuestion(
     }
   }
 
-  const { error } = await supabase
-    .from("questions")
-    .update({
-      question_text: questionText,
-      choices,
-      correct_answer: correctAnswer,
-      explanation,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", questionId);
+  const { error } = await supabase.rpc("edit_question", {
+    p_question_id: questionId,
+    p_question_text: questionText,
+    p_choices: choices,
+    p_correct_answer: correctAnswer,
+    p_explanation: explanation,
+  });
 
   if (error) return { error: `Failed to save: ${error.message}`, saved: false };
 

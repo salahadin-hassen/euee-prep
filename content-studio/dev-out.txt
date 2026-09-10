@@ -1,0 +1,9 @@
+▲ Next.js 16.3.4 (webpack)
+- Local:         http://localhost:3099
+- Network:       http://192.168.56.1:3099
+✓ Ready in 2.1s
+✓ Running next.config.ts took 603ms
+  Skipping creating a lockfile at C:\Users\SAHELION\Downloads\euee_prep\content-studio\.next\dev\lock because we're using WASM bindings
+
+○ Compiling proxy ...
+○ Compiling /_error ...
