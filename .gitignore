@@ -39,6 +39,15 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Local credentials, Supabase metadata, logs, and generated pipeline output
+**/.env
+**/.env.*
+!**/.env.example
+**/supabase/.temp/
+**/dev-*.txt
+**/prod-*.txt
+tools/content_pipeline/output/
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile

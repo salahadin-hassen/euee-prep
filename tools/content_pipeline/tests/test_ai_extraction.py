@@ -264,9 +264,10 @@ class ExtractionValidationTests(unittest.TestCase):
                 "ai_extraction._call_json",
                 side_effect=GeminiQuotaExhaustedError("429 RESOURCE_EXHAUSTED"),
             ) as call:
-                run(Path("paper.pdf"), root, "test-model", client=object())
+                exit_code = run(Path("paper.pdf"), root, "test-model", client=object())
 
             self.assertEqual(call.call_count, 1)
+            self.assertEqual(exit_code, 1)
             summary = json.loads((root / "run_summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["status"], "quota_exhausted")
             self.assertEqual(summary["gemini_calls"], 1)
@@ -343,10 +344,11 @@ class ExtractionValidationTests(unittest.TestCase):
                 "ai_extraction._call_json",
                 side_effect=GeminiUnavailableError("503 UNAVAILABLE"),
             ):
-                run(Path("paper.pdf"), root, "test-model", client=object())
+                exit_code = run(Path("paper.pdf"), root, "test-model", client=object())
 
             self.assertEqual((root / "raw_extraction/page-001.json").read_text(), raw)
             self.assertEqual((root / "verification/page-001.json").read_text(), verified)
+            self.assertEqual(exit_code, 1)
             summary = json.loads((root / "run_summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["status"], "completed_with_errors")
             self.assertTrue(any("GeminiUnavailableError" in error for error in summary["errors"]))

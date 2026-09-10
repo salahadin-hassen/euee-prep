@@ -1119,6 +1119,8 @@ def run(
         validation = validate_page(extracted, page, previous_numbers)
         result.validation = validation
         validation_path.write_text(json.dumps(validation, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if validation["errors"]:
+            status = "completed_with_errors"
         if validation["valid"]:
             previous_numbers.extend(validation["question_numbers"])
 
@@ -1131,9 +1133,11 @@ def run(
                 if crop_errors:
                     validation["errors"].extend(crop_errors)
                     validation["valid"] = False
+                    status = "completed_with_errors"
             except Exception as exc:
                 validation["errors"].append("visual asset processing failed: %s" % exc)
                 validation["valid"] = False
+                status = "completed_with_errors"
 
             answer_analysis = _cached_answer_analysis(answer_path, extracted, page)
             if answer_analysis is not None:
@@ -1177,6 +1181,8 @@ def run(
                         encoding="utf-8",
                     )
                     results.append(result)
+                    build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     continue
                 except Exception as exc:
                     status = "completed_with_errors"
@@ -1186,6 +1192,8 @@ def run(
                         encoding="utf-8",
                     )
                     results.append(result)
+                    build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     continue
             verification = _cached_verification(verification_path, page)
             if verification is not None:
@@ -1211,18 +1219,22 @@ def run(
                         encoding="utf-8",
                     )
                     results.append(result)
+                    build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     continue
                 except Exception as exc:
                     status = "completed_with_errors"
                     result.error = _error_text(exc)
                     results.append(result)
+                    build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
+                    _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
                     continue
         else:
             result.verification = {"pdf_page": page, "questions": [], "skipped": "deterministic validation failed"}
         results.append(result)
         build_blocked_candidate(results, pdf, output_root / "content_pack_candidate_blocked.json")
         _write_summary(output_root, pdf, model, len(images), results, calls, cached_pages, status, pdf_pages_total, requested_pages)
-    return 0
+    return 0 if status == "completed" else 1
 
 
 def main(argv: Optional[List[str]] = None) -> int:

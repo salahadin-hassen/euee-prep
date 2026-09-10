@@ -1,0 +1,35 @@
+name: EUEE extraction worker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: euee-extraction-worker
+  cancel-in-progress: false
+
+jobs:
+  process-one-job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out worker code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install extraction dependencies
+        run: python -m pip install --disable-pip-version-check -r tools/content_pipeline/requirements-ai.txt
+      - name: Process one queued extraction job
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          WORKER_CONTROL_URL: ${{ secrets.WORKER_CONTROL_URL }}
+          WORKER_SHARED_SECRET: ${{ secrets.WORKER_SHARED_SECRET }}
+          WORKER_ID: github-actions-${{ github.run_id }}
+        run: python tools/content_pipeline/providers/github_actions_worker.py

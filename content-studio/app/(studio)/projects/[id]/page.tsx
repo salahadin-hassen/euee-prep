@@ -82,6 +82,7 @@ export default async function PaperDetailPage({
     .order("assigned_at", { ascending: true });
 
   const members = (memberRows ?? []) as unknown as MemberRow[];
+  const canUploadSource = isAdmin || (role === "uploader" && members.some((member) => member.user_id === user.id));
 
   const { count: totalQuestions } = await supabase
     .from("questions")
@@ -178,6 +179,18 @@ export default async function PaperDetailPage({
           </form>
         </section>
       )}
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Source extraction</h2>
+        </div>
+        <p className="empty" style={{ marginBottom: 16 }}>
+          Upload private exam PDFs and queue selected pages for extraction.
+        </p>
+        <Link className="button" href={`/projects/${id}/extract`}>
+          {canUploadSource ? "Open extraction" : "View extraction jobs"}
+        </Link>
+      </section>
 
       <section className="panel">
         <div className="panel-head">
