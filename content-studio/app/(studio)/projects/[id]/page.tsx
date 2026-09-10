@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
 import { InviteForm } from "./invite-form";
 import { approveProject } from "../../_actions/approval";
+import { InlineExtraction } from "./inline-extraction";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,11 @@ export default async function PaperDetailPage({
 
   const hasQuestions = (totalQuestions ?? 0) > 0;
 
+  const [{ data: sourceDocuments }, { data: extractionJobs }] = await Promise.all([
+    supabase.from("source_documents").select("id, original_filename").eq("project_id", id).order("created_at", { ascending: false }),
+    supabase.from("extraction_jobs").select("id, source_document_id, requested_pages, status, total_pages, completed_pages, failed_pages, created_at, completed_at").eq("project_id", id).order("created_at", { ascending: false }),
+  ]);
+
   return (
     <main className="content">
       <section className="hero">
@@ -180,17 +186,11 @@ export default async function PaperDetailPage({
         </section>
       )}
 
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Source extraction</h2>
-        </div>
-        <p className="empty" style={{ marginBottom: 16 }}>
-          Upload private exam PDFs and queue selected pages for extraction.
-        </p>
-        <Link className="button" href={`/projects/${id}/extract`}>
-          {canUploadSource ? "Open extraction" : "View extraction jobs"}
-        </Link>
-      </section>
+      <InlineExtraction
+        projectId={typed.id}
+        jobs={(extractionJobs ?? []) as any}
+        sourceDocuments={(sourceDocuments ?? []) as any}
+      />
 
       <section className="panel">
         <div className="panel-head">
