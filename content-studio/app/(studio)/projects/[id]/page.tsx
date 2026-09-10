@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
+import { friendlyStatus } from "@/lib/status";
 import { InviteForm } from "./invite-form";
 import { approveProject } from "../../_actions/approval";
 import { InlineExtraction } from "./inline-extraction";
@@ -16,33 +17,28 @@ interface ProjectRow {
   stream: string;
   status: string;
   created_by: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface MemberRow {
   user_id: string;
   role: string;
-  assigned_at: string;
   profiles: { display_name: string | null } | null;
+}
+
+interface ExtractJob {
+  id: string;
+  source_document_id: string;
+  requested_pages: number[];
+  status: string;
+  total_pages: number;
+  completed_pages: number;
+  failed_pages: number;
+  created_at: string;
+  completed_at: string | null;
 }
 
 function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
-
-function friendlyStatus(status: string): string {
-  const map: Record<string, string> = {
-    draft: "Getting started",
-    processing: "Being prepared",
-    in_review: "Being reviewed",
-    blocked: "On hold",
-    ready_for_approval: "Almost done",
-    approved: "All done",
-    exported: "Sent out",
-    archived: "Archived",
-  };
-  return map[status] ?? status;
 }
 
 export default async function PaperDetailPage({
@@ -68,22 +64,21 @@ export default async function PaperDetailPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, exam_year, subject, stream, status, created_by, created_at, updated_at")
+    .select("id, title, exam_year, subject, stream, status, created_by")
     .eq("id", id)
     .single();
 
   if (!project) notFound();
-
   const typed = project as ProjectRow;
 
   const { data: memberRows } = await supabase
     .from("project_members")
-    .select("user_id, role, assigned_at, profiles(display_name)")
+    .select("user_id, role, profiles(display_name)")
     .eq("project_id", id)
     .order("assigned_at", { ascending: true });
 
   const members = (memberRows ?? []) as unknown as MemberRow[];
-  const canUploadSource = isAdmin || (role === "uploader" && members.some((member) => member.user_id === user.id));
+  const canUploadSource = isAdmin || (role === "uploader" && members.some((m) => m.user_id === user.id));
 
   const { count: totalQuestions } = await supabase
     .from("questions")
@@ -104,152 +99,80 @@ export default async function PaperDetailPage({
 
   const hasQuestions = (totalQuestions ?? 0) > 0;
 
-  const [{ data: sourceDocuments }, { data: extractionJobs }] = await Promise.all([
-    supabase.from("source_documents").select("id, original_filename").eq("project_id", id).order("created_at", { ascending: false }),
-    supabase.from("extraction_jobs").select("id, source_document_id, requested_pages, status, total_pages, completed_pages, failed_pages, created_at, completed_at").eq("project_id", id).order("created_at", { ascending: false }),
+  const [{ data: extractionJobs }] = await Promise.all([
+    supabase
+      .from("extraction_jobs")
+      .select("id, source_document_id, requested_pages, status, total_pages, completed_pages, failed_pages, created_at, completed_at")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
     <main className="content">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">Paper</p>
-          <h1>{typed.title}</h1>
-          <p className="lede">
-            {typed.subject} &middot; EC {typed.exam_year} &middot;{" "}
-            {typed.stream === "natural_science" ? "Natural Science" : "Social Science"}
-          </p>
+      <div className="paper-header">
+        <Link className="back-link" href="/projects">Papers</Link>
+        <h1>{typed.title}</h1>
+        <div className="paper-meta">
+          {typed.subject} &middot; EC {typed.exam_year} &middot;{" "}
+          {typed.stream === "natural_science" ? "Natural Science" : "Social Science"}
+          <span className="badge" style={{ marginLeft: 12 }}>
+            {friendlyStatus(typed.status)}
+          </span>
         </div>
-        <Link className="button" href="/projects">
-          Back to papers
-        </Link>
-      </section>
-
-      <div className="grid">
-        <div className="stat">
-          <div className="stat-label">Status</div>
-          <div className="stat-value">{friendlyStatus(typed.status)}</div>
-        </div>
-        {hasQuestions && (
-          <>
-            <div className="stat">
-              <div className="stat-label">Progress</div>
-              <div className="stat-value">{verifiedQuestions ?? 0} / {totalQuestions ?? 0}</div>
-            </div>
-            <div className="stat">
-              <div className="stat-label">Flagged</div>
-              <div className="stat-value">{flaggedQuestions ?? 0}</div>
-            </div>
-          </>
-        )}
       </div>
 
+      {hasQuestions && (
+        <div className="paper-stats">
+          <span className="stat-inline">
+            {verifiedQuestions ?? 0}/{totalQuestions ?? 0} verified
+          </span>
+          {(flaggedQuestions ?? 0) > 0 && (
+            <span className="stat-inline stat-flagged">
+              {flaggedQuestions} flagged
+            </span>
+          )}
+          {isAdmin && typed.status === "ready_for_approval" && (
+            <form action={approveProject} style={{ display: "inline" }}>
+              <input type="hidden" name="project_id" value={typed.id} />
+              <button className="button button-sm" type="submit">
+                Approve
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
       {hasQuestions && typed.status !== "approved" && (
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Review questions</h2>
-          </div>
-          <p className="empty" style={{ marginBottom: 16 }}>
-            {verifiedQuestions === totalQuestions
-              ? "All questions verified — this paper is done!"
-              : `${verifiedQuestions ?? 0} of ${totalQuestions ?? 0} verified so far.`}
-          </p>
+        <div className="paper-actions">
           <Link className="button" href={`/projects/${id}/review`}>
-            Start reviewing
+            Review questions
           </Link>
-        </section>
-      )}
-
-      {typed.status === "approved" && (
-        <section className="panel">
-          <div className="panel-head">
-            <h2>All done!</h2>
-          </div>
-          <p className="empty">
-            Every question has been verified. This paper is ready.
-          </p>
-        </section>
-      )}
-
-      {isAdmin && typed.status === "ready_for_approval" && (
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Ready for approval</h2>
-          </div>
-          <p className="empty" style={{ marginBottom: 16 }}>
-            Every question is verified. Approval checks the complete paper atomically.
-          </p>
-          <form action={approveProject}>
-            <input type="hidden" name="project_id" value={typed.id} />
-            <button className="button" type="submit">Approve paper</button>
-          </form>
-        </section>
+        </div>
       )}
 
       <InlineExtraction
         projectId={typed.id}
-        jobs={(extractionJobs ?? []) as any}
-        sourceDocuments={(sourceDocuments ?? []) as any}
+        jobs={(extractionJobs ?? []) as ExtractJob[]}
+        canUpload={canUploadSource}
       />
 
-      <section className="panel">
-        <div className="panel-head">
-          <h2>People helping out</h2>
-          <span className="badge">{members.length}</span>
-        </div>
-        {members.length === 0 ? (
-          <p className="empty">Nobody&apos;s been invited yet.</p>
-        ) : (
-          members.map((m) => (
+      {members.length > 0 && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Team</h2>
+          </div>
+          {members.map((m) => (
             <div className="project-row" key={m.user_id}>
-              <div>
-                <div className="project-title">
-                  {m.profiles?.display_name || "Someone"}
-                </div>
-                <div className="project-meta">
-                  Joined {new Date(m.assigned_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </div>
+              <div className="project-title">
+                {m.profiles?.display_name || "Someone"}
               </div>
+              <span className="badge">{m.role}</span>
             </div>
-          ))
-        )}
-      </section>
+          ))}
+        </section>
+      )}
 
       {isAdmin && <InviteForm projectId={typed.id} />}
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Paper details</h2>
-        </div>
-        <div className="project-row">
-          <div>
-            <div className="project-title">Created</div>
-            <div className="project-meta">
-              {new Date(typed.created_at).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-        <div className="project-row">
-          <div>
-            <div className="project-title">Last updated</div>
-            <div className="project-meta">
-              {new Date(typed.updated_at).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }

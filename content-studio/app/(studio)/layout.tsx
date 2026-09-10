@@ -1,45 +1,59 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { dashboardPath } from "@/lib/auth/roles";
+import { isAdminRole, type AppRole } from "@/lib/auth/roles";
 import { SignOutButton } from "@/components/sign-out-button";
+import { NotificationBell } from "@/components/notification-bell";
+import { listNotifications, getUnreadCount } from "./_actions/notification";
 
-export default async function StudioLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function StudioLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("display_name, role")
     .eq("id", user.id)
     .single();
+
+  const role = (profile?.role || "uploader") as AppRole;
+  const admin = isAdminRole(role);
   const displayName = profile?.display_name || user.email || "You";
+
+  const [notifications, unread] = await Promise.all([
+    listNotifications(),
+    getUnreadCount(),
+  ]);
 
   return (
     <div className="shell">
       <aside className="sidebar">
-        <Link className="brand" href="/dashboard">
+        <Link className="brand" href="/projects">
           <span className="brand-mark">E</span>
-          <span>Content Studio</span>
+          <span>Studio</span>
         </Link>
-        <nav className="nav" aria-label="Workspace navigation">
-          <Link href={dashboardPath(profile?.role as never)}>Overview</Link>
+        <nav className="nav" aria-label="Navigation">
           <Link href="/projects">Papers</Link>
-          <Link href="/assignments">My papers</Link>
+          {admin && <Link href="/admin">Admin</Link>}
         </nav>
-        <div className="sidebar-note">
-          Check questions, mark what looks right, flag anything off.
+        <div className="sidebar-bottom">
+          <SignOutButton />
         </div>
-        <SignOutButton />
       </aside>
       <div className="main">
         <header className="topbar">
-          <div>
-            <span className="eyebrow">EUEE content studio</span>
-          </div>
+          <div />
+          <NotificationBell initialNotifications={notifications} initialUnread={unread} />
           <div className="user-chip">
             <span>{displayName}</span>
-            <span className="avatar">{displayName.slice(0, 1).toUpperCase()}</span>
+            <span className="avatar">
+              {displayName.slice(0, 1).toUpperCase()}
+            </span>
           </div>
         </header>
         {children}

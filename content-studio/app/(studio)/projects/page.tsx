@@ -1,63 +1,77 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole, type AppRole } from "@/lib/auth/roles";
+import { friendlyStatus } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 
-function friendlyStatus(status: string): string {
-  const map: Record<string, string> = {
-    draft: "Getting started",
-    processing: "Being prepared",
-    in_review: "Being reviewed",
-    blocked: "On hold",
-    ready_for_approval: "Almost done",
-    approved: "All done",
-    exported: "Sent out",
-    archived: "Archived",
-  };
-  return map[status] ?? status;
-}
-
 export default async function PapersPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: projectRows } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const role = (profile?.role || "uploader") as AppRole;
+  const admin = isAdminRole(role);
+
+  let projectsQuery = supabase
     .from("projects")
-    .select("id, title, subject, exam_year, status")
-    .order("updated_at", { ascending: false });
-  const projects = projectRows ?? [];
+    .select("id, title, subject, exam_year, status");
+
+  if (!admin) {
+    const { data: membershipRows } = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("user_id", user.id);
+    const projectIds = (membershipRows ?? []).map((m) => m.project_id);
+    if (projectIds.length === 0) {
+      return (
+        <main className="content">
+          <h1>Papers</h1>
+          <p className="empty">No papers assigned to you yet.</p>
+        </main>
+      );
+    }
+    projectsQuery = projectsQuery.in("id", projectIds);
+  }
+
+  const { data: projects } = await projectsQuery.order("updated_at", {
+    ascending: false,
+  });
 
   return (
     <main className="content">
       <section className="hero">
-        <div>
-          <p className="eyebrow">Your papers</p>
-          <h1>Papers</h1>
-          <p className="lede">
-            Exam papers that need checking. Click into one to review questions.
-          </p>
-        </div>
+        <h1>Papers</h1>
+        {admin && (
+          <Link className="button" href="/projects/new">
+            New paper
+          </Link>
+        )}
       </section>
+
       <section className="panel">
-        <div className="panel-head">
-          <h2>All papers</h2>
-        </div>
-        {projects.length === 0 ? (
-          <p className="empty">No papers yet. Create one to get started.</p>
+        {!(projects?.length) ? (
+          <p className="empty">No papers yet.</p>
         ) : (
-          projects.map((project) => (
-            <div className="project-row" key={project.id}>
+          projects.map((p) => (
+            <div className="project-row" key={p.id}>
               <div>
-                <Link className="project-title" href={`/projects/${project.id}`}>
-                  {project.title}
+                <Link className="project-title" href={`/projects/${p.id}`}>
+                  {p.title}
                 </Link>
                 <div className="project-meta">
-                  {project.subject} &middot; EC {project.exam_year}
+                  {p.subject} &middot; EC {p.exam_year}
                 </div>
               </div>
-              <span className="badge">{friendlyStatus(project.status)}</span>
+              <span className="badge">{friendlyStatus(p.status)}</span>
             </div>
           ))
         )}

@@ -52,6 +52,21 @@ export async function createExtractionJob(
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/extract`);
 
+  // Notify the job creator that extraction has started
+  const { data: projectRow } = await supabase
+    .from("projects")
+    .select("title")
+    .eq("id", projectId)
+    .single();
+  await supabase.rpc("create_notification", {
+    p_user_id: user.id,
+    p_project_id: projectId,
+    p_job_id: jobId,
+    p_kind: "extraction_started",
+    p_title: projectRow?.title ?? "Paper",
+    p_body: `Extracting ${requestedPages.length} page${requestedPages.length !== 1 ? "s" : ""}`,
+  });
+
   const dispatchResult = await dispatchExtractionWorker(jobId);
   const dispatchWarning = dispatchResult.ok
     ? null

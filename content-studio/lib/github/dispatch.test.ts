@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach, afterEach } from "node:test";
-import { dispatchExtractionWorker, type DispatchResult } from "./dispatch.ts";
+import { dispatchExtractionWorker } from "./dispatch.ts";
 
 describe("dispatchExtractionWorker", () => {
   const originalEnv = { ...process.env };
@@ -17,6 +17,7 @@ describe("dispatchExtractionWorker", () => {
     process.env.GITHUB_REPO_NAME = "test-repo";
     process.env.GITHUB_WORKFLOW_FILE = "worker.yml";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
       fetchCalls.push({ url: urlStr, init: init ?? {} });
@@ -32,6 +33,7 @@ describe("dispatchExtractionWorker", () => {
 
   afterEach(() => {
     process.env = { ...originalEnv };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (globalThis as any).fetch;
   });
 
@@ -94,6 +96,7 @@ describe("dispatchExtractionWorker", () => {
   });
 
   it("returns error on network failure", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).fetch = async () => { throw new TypeError("fetch failed"); };
     const result = await dispatchExtractionWorker("job-1");
     assert.equal(result.ok, false);

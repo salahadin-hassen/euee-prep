@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it } from "node:test";
 
 // We test the business logic of the createExtractionJob action by
 // verifying the contract: the action should check for existing active
