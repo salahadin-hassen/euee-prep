@@ -9,7 +9,7 @@ import {
   prepareSourceDocumentUpload,
   registerSourceDocument,
 } from "./extract/_actions/source-document";
-import { createExtractionJob, cancelExtractionJob } from "./extract/_actions/job";
+import { createExtractionJob, cancelExtractionJob, type CreateJobResult } from "./extract/_actions/job";
 
 function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -148,9 +148,13 @@ export function InlineExtraction({
       }
 
       const job = await createExtractionJob(projectId, registered.documentId, pages);
-      if (job.error) {
+      if (!job.ok) {
         setError(job.error);
         return;
+      }
+
+      if (job.dispatchWarning) {
+        setError(job.dispatchWarning);
       }
 
       setFile(null);

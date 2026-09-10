@@ -119,9 +119,13 @@ export function ExtractionForm({ projectId }: { projectId: string }) {
       }
 
       const job = await createExtractionJob(projectId, registered.documentId, pages);
-      if (job.error) {
+      if (!job.ok) {
         setError(job.error);
         return;
+      }
+
+      if (job.dispatchWarning) {
+        setError(job.dispatchWarning);
       }
 
       setFile(null);

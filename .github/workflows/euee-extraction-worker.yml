@@ -1,9 +1,14 @@
 name: EUEE extraction worker
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Optional: specific job ID to process (empty = claim next)"
+        required: false
+        type: string
+  schedule:
+    - cron: "0 3 * * *"
 
 permissions:
   contents: read
@@ -13,9 +18,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  process-one-job:
+  check-queue:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 2
+    outputs:
+      has_jobs: ${{ steps.check.outputs.has_jobs }}
+    steps:
+      - name: Check for queued jobs
+        id: check
+        env:
+          WORKER_CONTROL_URL: ${{ secrets.WORKER_CONTROL_URL }}
+          WORKER_SHARED_SECRET: ${{ secrets.WORKER_SHARED_SECRET }}
+        run: |
+          if [ -n "${{ inputs.job_id }}" ]; then
+            echo "has_jobs=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$WORKER_CONTROL_URL/api/worker/claim-next" \
+            -H "Authorization: Bearer $WORKER_SHARED_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{"worker_id":"health-check"}' \
+            --max-time 10)
+          if [ "$STATUS" = "200" ]; then
+            echo "has_jobs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_jobs=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  process-one-job:
+    needs: check-queue
+    if: needs.check-queue.outputs.has_jobs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Check out worker code
         uses: actions/checkout@v4
@@ -23,6 +58,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: tools/content_pipeline/requirements-ai.txt
       - name: Install extraction dependencies
         run: python -m pip install --disable-pip-version-check -r tools/content_pipeline/requirements-ai.txt
       - name: Process one queued extraction job
