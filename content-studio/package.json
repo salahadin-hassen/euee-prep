@@ -12,7 +12,6 @@
     "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.3.4",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",
     "next": "^16.3.4",

@@ -1,0 +1,17 @@
+# Vercel builds the Next.js app from content-studio/.
+android/
+ios/
+linux/
+macos/
+windows/
+web/
+lib/
+test/
+assets/
+entrance-papers/
+tools/content_pipeline/
+docs/
+*.pdf
+*.log
+**/.env.local
+**/supabase/.temp/
