@@ -357,21 +357,25 @@ def render_pages(
 
 def _call_json(client: Any, model: str, image_path: Path, prompt: str, schema: Dict[str, Any]) -> Dict[str, Any]:
     image = image_path.read_bytes()
+    config_kwargs = {
+        "response_mime_type": "application/json",
+        # Keep JSON Schema unions such as ["integer", "null"] intact.
+        # response_schema converts through types.Schema, whose `type` field
+        # accepts only one value in google-genai 2.x.
+        "response_json_schema": schema,
+        "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+            disable=True,
+        ),
+    }
+    # Gemini 3.x rejects legacy sampling parameters such as temperature.
+    # Earlier models use temperature=0 for deterministic structured output.
+    if not model.startswith("gemini-3"):
+        config_kwargs["temperature"] = 0
     try:
         response = client.models.generate_content(
             model=model,
             contents=[types.Part.from_bytes(data=image, mime_type="image/png"), prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                # Keep JSON Schema unions such as ["integer", "null"] intact.
-                # response_schema converts through types.Schema, whose `type` field
-                # accepts only one value in google-genai 2.x.
-                response_json_schema=schema,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                    disable=True,
-                ),
-                temperature=0,
-            ),
+            config=types.GenerateContentConfig(**config_kwargs),
         )
     except Exception as exc:
         if _is_quota_exhausted(exc):
