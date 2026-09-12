@@ -110,7 +110,7 @@ export async function retryExtractionJob(
     .single();
 
   if (!failedJob) return { ok: false, error: "Extraction job not found." };
-  if (failedJob.status !== "failed" && failedJob.status !== "cancelled" && failedJob.status !== "completed_with_errors") {
+  if (failedJob.status !== "failed" && failedJob.status !== "cancelled" && failedJob.status !== "completed_with_errors" && failedJob.status !== "quota_exhausted") {
     return { ok: false, error: "Only failed, cancelled, or partial jobs can be retried." };
   }
 

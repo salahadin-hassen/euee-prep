@@ -178,12 +178,12 @@ export function EditForm({ question, imageUrl, projectId }: EditFormProps) {
         </div>
 
         <label>
-          Correct answer
-          <input type="text" name="correct_answer" defaultValue={question.correct_answer} required />
+          Answer draft (optional)
+          <input type="text" name="correct_answer" defaultValue={question.correct_answer} />
         </label>
 
         <label>
-          Explanation
+          Explanation draft
           <textarea name="explanation" rows={3} defaultValue={question.explanation} />
         </label>
 

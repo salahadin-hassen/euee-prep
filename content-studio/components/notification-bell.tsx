@@ -10,6 +10,8 @@ const KIND_LABELS: Record<string, string> = {
   extraction_completed: "Extraction complete",
   extraction_failed: "Extraction failed",
   extraction_issues: "Extraction completed with issues",
+  review_assigned: "Review assigned",
+  review_ready: "Review ready",
 };
 
 function timeAgo(dateStr: string): string {
@@ -60,9 +62,8 @@ export function NotificationBell({ initialNotifications, initialUnread }: {
   function handleNotificationClick(n: NotificationRow) {
     if (!n.read) markRead([n.id]);
     setOpen(false);
-    // Deep-link: completion notifications go to review, others to paper
-    if (n.kind === "extraction_completed" || n.kind === "extraction_issues") {
-      router.push(`/projects/${n.project_id}/review`);
+    if (n.assignment_id || n.kind === "extraction_completed" || n.kind === "extraction_issues" || n.kind === "review_assigned" || n.kind === "review_ready") {
+      router.push(`/projects/${n.project_id}/review${n.assignment_id ? `?assignment=${n.assignment_id}` : ""}`);
     } else {
       router.push(`/projects/${n.project_id}`);
     }

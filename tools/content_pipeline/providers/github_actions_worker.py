@@ -71,6 +71,28 @@ def _upload_asset(control_url: str, token: str, worker_id: str, job_id: str, ass
         raise WorkerControlError("visual asset upload failed") from exc
 
 
+def _finish_failed_job(control_url: str, token: str, worker_id: str, descriptor: WorkerJobDescriptor, error: str) -> None:
+    """Make fatal worker errors visible and terminal instead of leaving a lease stuck."""
+    for page in descriptor.requested_pages:
+        try:
+            _request(control_url, token, "/api/worker/page-failure", {
+                "job_id": descriptor.job_id,
+                "worker_id": worker_id,
+                "pdf_page": page,
+                "status": "failed",
+                "error": error[:4000],
+            })
+        except WorkerControlError:
+            pass
+    try:
+        _request(control_url, token, "/api/worker/complete", {
+            "job_id": descriptor.job_id,
+            "worker_id": worker_id,
+        })
+    except WorkerControlError:
+        pass
+
+
 def process_one_job() -> int:
     control_url = os.environ.get("WORKER_CONTROL_URL")
     token = os.environ.get("WORKER_SHARED_SECRET")
@@ -79,7 +101,11 @@ def process_one_job() -> int:
     if not control_url or not token or not model:
         raise WorkerControlError("WORKER_CONTROL_URL, WORKER_SHARED_SECRET, and GEMINI_MODEL are required")
 
-    claimed = _request(control_url, token, "/api/worker/claim-next", {"worker_id": worker_id})
+    job_id = os.environ.get("WORKER_JOB_ID") or None
+    payload = {"worker_id": worker_id}
+    if job_id:
+        payload["job_id"] = job_id
+    claimed = _request(control_url, token, "/api/worker/claim-next", payload)
     if claimed is None:
         return 0
     descriptor = WorkerJobDescriptor.from_dict(claimed["descriptor"])
@@ -90,10 +116,18 @@ def process_one_job() -> int:
         root = Path(directory)
         pdf_path = root / "source.pdf"
         output_root = root / "output"
-        _download(source_url, pdf_path)
+        try:
+            _download(source_url, pdf_path)
+        except Exception as exc:
+            _finish_failed_job(control_url, token, worker_id, descriptor, "Source PDF download failed: %s" % exc)
+            raise
         for page in descriptor.requested_pages:
             _request(control_url, token, "/api/worker/page-started", {"job_id": descriptor.job_id, "worker_id": worker_id, "pdf_page": page})
-        exit_code = run_extraction(pdf_path, output_root, model, pages=descriptor.requested_pages)
+        try:
+            exit_code = run_extraction(pdf_path, output_root, model, pages=descriptor.requested_pages)
+        except Exception as exc:
+            _finish_failed_job(control_url, token, worker_id, descriptor, "Extraction failed: %s" % exc)
+            raise
         result = build_result_contract(descriptor, source_hash, output_root, {"dpi": 180})
 
         for page_result in result["pages"]:

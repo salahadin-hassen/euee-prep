@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -70,7 +70,7 @@ function ExtractionJobRow({
   const isActive = job.status === "queued" || job.status === "processing";
   const isComplete = job.status === "completed";
   const hasIssues = job.status === "completed_with_errors";
-  const isFailed = job.status === "failed";
+  const isFailed = job.status === "failed" || job.status === "quota_exhausted";
 
   const totalPages = job.requested_pages.length;
 
@@ -123,9 +123,9 @@ function ExtractionJobRow({
         <div className="extraction-status extraction-failed">
           <span className="extraction-icon" aria-hidden="true">{"\u2717"}</span>
           <div>
-            <div className="extraction-status-text">Extraction failed</div>
-            <div className="extraction-status-detail">
-              We couldn&apos;t finish processing this paper.
+              <div className="extraction-status-text">{job.status === "quota_exhausted" ? "Extraction paused" : "Extraction failed"}</div>
+              <div className="extraction-status-detail">
+              {job.status === "quota_exhausted" ? "The AI quota was exhausted before the paper finished." : "We couldn&apos;t finish processing this paper."}
             </div>
           </div>
           {canCancel && (
@@ -200,6 +200,7 @@ export function InlineExtraction({
   const [detectedPages, setDetectedPages] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [dispatchWarning, setDispatchWarning] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -210,9 +211,14 @@ export function InlineExtraction({
     setDetectedPages(null);
     setError(null);
     setSuccess(null);
+    setDispatchWarning(null);
     if (selected && selected.type === "application/pdf") {
       const count = await detectPdfPageCount(selected);
-      if (count && count > 0) setDetectedPages(count);
+      if (count && count > 0) {
+        setDetectedPages(count);
+      } else {
+        setError("We couldn't read the PDF page count. Choose a valid, readable PDF and try again.");
+      }
     }
   }, []);
 
@@ -236,7 +242,12 @@ export function InlineExtraction({
       return;
     }
 
-    const pages = detectedPages ? Array.from({ length: detectedPages }, (_, i) => i + 1) : [1];
+    if (!detectedPages) {
+      setError("Wait for the PDF page count before starting extraction.");
+      return;
+    }
+
+    const pages = Array.from({ length: detectedPages }, (_, i) => i + 1);
 
     setPending(true);
     try {
@@ -278,7 +289,7 @@ export function InlineExtraction({
       setFile(null);
       setDetectedPages(null);
       setSuccess("Extraction started");
-      setTimeout(() => setSuccess(null), 4000);
+      setDispatchWarning(job.dispatchWarning);
       router.refresh();
     } finally {
       setPending(false);
@@ -305,6 +316,12 @@ export function InlineExtraction({
   const activeJobs = jobs.filter((j) => j.status === "queued" || j.status === "processing");
   const hasActiveJobs = activeJobs.length > 0;
 
+  useEffect(() => {
+    if (!hasActiveJobs) return;
+    const interval = window.setInterval(() => router.refresh(), 5000);
+    return () => window.clearInterval(interval);
+  }, [hasActiveJobs, router]);
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -329,13 +346,18 @@ export function InlineExtraction({
             </p>
           )}
           {error && <p className="error" role="alert">{error}</p>}
+          {dispatchWarning && (
+            <p className="error" role="alert">
+              Extraction is queued, but the worker could not be dispatched. It will be picked up by recovery: {dispatchWarning}
+            </p>
+          )}
           {success && (
             <p className="success" role="status">
               {"\u2713"} {success}
             </p>
           )}
           <button className="button" type="button" onClick={submit} disabled={pending}>
-            {pending ? "\u25CC Starting\u2026" : detectedPages ? `Extract ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : "Extract"}
+            {pending ? "\u25CC Starting extraction\u2026" : detectedPages ? "Extract paper" : "Extract paper"}
           </button>
         </div>
       )}

@@ -6,7 +6,8 @@ export function isAdminRole(role: AppRole): boolean {
   return role === "owner" || role === "admin";
 }
 
-export function dashboardPath(_role: AppRole): string {
+export function dashboardPath(role: AppRole): string {
+  void role;
   return "/projects";
 }
 

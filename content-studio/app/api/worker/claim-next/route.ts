@@ -12,10 +12,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid worker_id" }, { status: 400 });
     }
     const supabase = createServiceClient();
-    const { data: claim, error: claimError } = await supabase.rpc("claim_next_extraction_job", {
-      p_worker_id: workerId,
-      p_lease_seconds: 1800,
-    });
+    const jobId = typeof body.job_id === "string" ? body.job_id : null;
+    const { data: claim, error: claimError } = jobId
+      ? await supabase.rpc("claim_extraction_job", {
+          p_job_id: jobId,
+          p_worker_id: workerId,
+          p_lease_seconds: 1800,
+        })
+      : await supabase.rpc("claim_next_extraction_job", {
+          p_worker_id: workerId,
+          p_lease_seconds: 1800,
+        });
     if (claimError) return NextResponse.json({ error: "Could not claim job" }, { status: 409 });
     if (!claim) return new NextResponse(null, { status: 204 });
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminRole, type AppRole } from "@/lib/auth/roles";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NotificationBell } from "@/components/notification-bell";
 import { listNotifications, getUnreadCount } from "./_actions/notification";
@@ -21,8 +20,6 @@ export default async function StudioLayout({
     .eq("id", user.id)
     .single();
 
-  const role = (profile?.role || "uploader") as AppRole;
-  const admin = isAdminRole(role);
   const displayName = profile?.display_name || user.email || "You";
 
   const [notifications, unread] = await Promise.all([

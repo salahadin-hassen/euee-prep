@@ -25,6 +25,15 @@ interface MemberRow {
   profiles: { display_name: string | null } | null;
 }
 
+interface AssignmentRow {
+  id: string;
+  reviewer_id: string;
+  start_order_index: number | null;
+  end_order_index: number | null;
+  status: string;
+  profiles: { display_name: string | null } | null;
+}
+
 interface ExtractJob {
   id: string;
   source_document_id: string;
@@ -135,6 +144,24 @@ export default async function PaperDetailPage({
   const members = (memberRows ?? []) as unknown as MemberRow[];
   const canUploadSource = isAdmin || (role === "uploader" && members.some((m) => m.user_id === user.id));
 
+  const { data: assignmentRows } = isAdmin
+    ? await supabase
+        .from("review_assignments")
+        .select("id, reviewer_id, start_order_index, end_order_index, status")
+        .eq("project_id", id)
+        .order("assigned_at", { ascending: true })
+    : { data: [] };
+  const rawAssignments = assignmentRows ?? [];
+  const reviewerIds = rawAssignments.map((assignment) => assignment.reviewer_id);
+  const { data: reviewerProfiles } = reviewerIds.length > 0
+    ? await supabase.from("profiles").select("id, display_name").in("id", reviewerIds)
+    : { data: [] };
+  const profileById = new Map((reviewerProfiles ?? []).map((profile) => [profile.id, profile]));
+  const assignments = rawAssignments.map((assignment) => ({
+    ...assignment,
+    profiles: profileById.get(assignment.reviewer_id) ?? null,
+  })) as unknown as AssignmentRow[];
+
   const { count: totalQuestions } = await supabase
     .from("questions")
     .select("id", { count: "exact", head: true })
@@ -228,6 +255,25 @@ export default async function PaperDetailPage({
                 {m.profiles?.display_name || "Someone"}
               </div>
               <span className="badge">{m.role}</span>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {isAdmin && assignments.length > 0 && (
+        <section className="panel">
+          <div className="panel-head"><h2>Review assignments</h2></div>
+          {assignments.map((assignment) => (
+            <div className="project-row" key={assignment.id}>
+              <div>
+                <div className="project-title">{assignment.profiles?.display_name || "Reviewer"}</div>
+                <div className="project-meta">
+                  {assignment.start_order_index === null
+                    ? "Whole paper"
+                    : `Questions ${assignment.start_order_index + 1}-${(assignment.end_order_index ?? assignment.start_order_index) + 1}`}
+                </div>
+              </div>
+              <span className="badge">{assignment.status}</span>
             </div>
           ))}
         </section>

@@ -16,7 +16,7 @@ Worker (GitHub Actions) ←── API Routes (shared-secret auth)
 ```text
 Login → Papers → Create paper → Upload PDF → Extract
   → Worker claims job → Gemini extracts questions → Staging
-  → Auto-promotion to review → Review/Edit/Flag/Verify
+  → Auto-promotion to review → Assign ranges → Review/Edit/Flag/Verify
   → Admin approves
 ```
 
@@ -50,7 +50,7 @@ Required environment variables (by name):
 ```powershell
 npm run typecheck    # TypeScript check
 npm run lint         # ESLint
-npm test             # Node.js test runner (79 tests)
+npm test             # Node.js test runner (83 tests)
 npm run build        # Production build
 python -m unittest discover tools/content_pipeline/tests -v  # Python tests (80 tests)
 ```
@@ -63,6 +63,8 @@ python -m unittest discover tools/content_pipeline/tests -v  # Python tests (80 
 - Source PDFs and extraction assets are private storage
 - Audit events are append-only (no direct client writes)
 - `promote_extraction_questions` is service_role only
+- Promoted questions retain source page, source region, and AI answer evidence
+- Reviewer access is scoped by paper/range assignments in PostgreSQL
 
 ## Cost
 
@@ -85,7 +87,8 @@ $0 operating cost under intended free tiers:
 
 - Export is not implemented (status transitions to `approved` only)
 - No email/SMS/push notifications (in-app only)
-- Invite uses display_name lookup (exact match required)
+- Reviewer assignment uses a unique display-name lookup (email invitations are not implemented)
+- Automatic AI explanation generation is not implemented; reviewers can save drafts and final explanations after answer verification
 - Gemini free tier has rate limits; large papers may hit quota
 
 ## Deployment

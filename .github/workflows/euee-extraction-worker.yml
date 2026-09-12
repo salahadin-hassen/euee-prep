@@ -18,37 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-queue:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    outputs:
-      has_jobs: ${{ steps.check.outputs.has_jobs }}
-    steps:
-      - name: Check for queued jobs
-        id: check
-        env:
-          WORKER_CONTROL_URL: ${{ secrets.WORKER_CONTROL_URL }}
-          WORKER_SHARED_SECRET: ${{ secrets.WORKER_SHARED_SECRET }}
-        run: |
-          if [ -n "${{ inputs.job_id }}" ]; then
-            echo "has_jobs=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "$WORKER_CONTROL_URL/api/worker/claim-next" \
-            -H "Authorization: Bearer $WORKER_SHARED_SECRET" \
-            -H "Content-Type: application/json" \
-            -d '{"worker_id":"health-check"}' \
-            --max-time 10)
-          if [ "$STATUS" = "200" ]; then
-            echo "has_jobs=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_jobs=false" >> "$GITHUB_OUTPUT"
-          fi
-
   process-one-job:
-    needs: check-queue
-    if: needs.check-queue.outputs.has_jobs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -69,4 +39,5 @@ jobs:
           WORKER_CONTROL_URL: ${{ secrets.WORKER_CONTROL_URL }}
           WORKER_SHARED_SECRET: ${{ secrets.WORKER_SHARED_SECRET }}
           WORKER_ID: github-actions-${{ github.run_id }}
+          WORKER_JOB_ID: ${{ inputs.job_id }}
         run: python tools/content_pipeline/providers/github_actions_worker.py

@@ -11,6 +11,7 @@ export interface NotificationRow {
   created_at: string;
   project_id: string;
   job_id: string | null;
+  assignment_id: string | null;
 }
 
 export async function listNotifications(): Promise<NotificationRow[]> {
@@ -20,7 +21,7 @@ export async function listNotifications(): Promise<NotificationRow[]> {
 
   const { data } = await supabase
     .from("notifications")
-    .select("id, kind, title, body, read, created_at, project_id, job_id")
+    .select("id, kind, title, body, read, created_at, project_id, job_id, assignment_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50);

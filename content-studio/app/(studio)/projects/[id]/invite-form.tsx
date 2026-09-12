@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { inviteHelper, type InviteState } from "./_actions/invite";
 
 interface InviteFormProps {
@@ -11,33 +12,48 @@ const initialState: InviteState = { error: null, success: false };
 
 export function InviteForm({ projectId }: InviteFormProps) {
   const [state, formAction, pending] = useActionState(inviteHelper, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) router.refresh();
+  }, [router, state.success]);
 
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>Invite someone to help</h2>
+          <h2>Assign reviewer</h2>
       </div>
       <form className="form" action={formAction}>
         <input type="hidden" name="project_id" value={projectId} />
-        <label>
-          Their name
+          <label>
+            Reviewer name
           <input
             type="text"
             name="display_name"
             required
-            placeholder="Type the name they signed up with"
+            placeholder="Type their unique display name"
           />
         </label>
+        <div className="choice-row">
+          <label>
+            From question
+            <input type="number" name="start_question" min="1" placeholder="Whole paper" />
+          </label>
+          <label>
+            Through question
+            <input type="number" name="end_question" min="1" placeholder="Whole paper" />
+          </label>
+        </div>
         {state.error && (
           <p className="error" role="alert">{state.error}</p>
         )}
         {state.success && (
           <p style={{ color: "var(--teal)", fontWeight: 700 }}>
-            They&apos;ve been invited!
+            Reviewer assigned.
           </p>
         )}
         <button className="button" type="submit" disabled={pending}>
-          {pending ? "Inviting..." : "Invite"}
+          {pending ? "Assigning..." : "Assign reviewer"}
         </button>
       </form>
     </section>
