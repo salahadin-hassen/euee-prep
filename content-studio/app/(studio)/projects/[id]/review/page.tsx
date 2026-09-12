@@ -46,7 +46,7 @@ export default async function ReviewPage({
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (!profile || (!isAdminRole(profile.role as AppRole) && profile.role !== "reviewer")) redirect("/assignments");
+  if (!profile || (!isAdminRole(profile.role as AppRole) && profile.role !== "reviewer")) redirect("/projects");
 
   const { data: project } = await supabase
     .from("projects")

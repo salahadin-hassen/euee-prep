@@ -41,7 +41,7 @@ function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
-function ExtractionSummary({ jobs }: { jobs: ExtractJob[] }) {
+function ExtractionSummary({ jobs, questionCount }: { jobs: ExtractJob[]; questionCount: number }) {
   const latest = jobs[0];
   if (!latest) return null;
 
@@ -65,7 +65,9 @@ function ExtractionSummary({ jobs }: { jobs: ExtractJob[] }) {
     return (
       <div className="extraction-summary extraction-summary--ready">
         <span className="extraction-summary-icon" aria-hidden="true">{"\u2713"}</span>
-        <span>Ready for review</span>
+        <span>
+          Ready for review &middot; {questionCount} question{questionCount !== 1 ? "s" : ""} ready
+        </span>
       </div>
     );
   }
@@ -76,6 +78,7 @@ function ExtractionSummary({ jobs }: { jobs: ExtractJob[] }) {
         <span className="extraction-summary-icon" aria-hidden="true">{"\u26A0"}</span>
         <span>
           Completed with issues ({latest.completed_pages} of {latest.requested_pages.length} pages)
+          {questionCount > 0 && <> &middot; {questionCount} question{questionCount !== 1 ? "s" : ""} ready</>}
         </span>
       </div>
     );
@@ -204,8 +207,8 @@ export default async function PaperDetailPage({
         </div>
       )}
 
-      {!hasQuestions && jobs.length > 0 && (
-        <ExtractionSummary jobs={jobs} />
+      {jobs.length > 0 && !typed.status.startsWith("approved") && (
+        <ExtractionSummary jobs={jobs} questionCount={totalQuestions ?? 0} />
       )}
 
       <InlineExtraction

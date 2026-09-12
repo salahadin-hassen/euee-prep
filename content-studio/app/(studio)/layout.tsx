@@ -39,7 +39,6 @@ export default async function StudioLayout({
         </Link>
         <nav className="nav" aria-label="Navigation">
           <Link href="/projects">Papers</Link>
-          {admin && <Link href="/admin">Admin</Link>}
         </nav>
         <div className="sidebar-bottom">
           <SignOutButton />

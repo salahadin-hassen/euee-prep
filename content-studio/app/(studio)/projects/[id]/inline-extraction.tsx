@@ -8,7 +8,7 @@ import {
   prepareSourceDocumentUpload,
   registerSourceDocument,
 } from "./extract/_actions/source-document";
-import { createExtractionJob, cancelExtractionJob } from "./extract/_actions/job";
+import { createExtractionJob, cancelExtractionJob, retryExtractionJob } from "./extract/_actions/job";
 
 function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -56,12 +56,16 @@ function ExtractionJobRow({
   canCancel,
   cancellingId,
   onCancel,
+  onRetry,
+  retryingId,
 }: {
   job: Job;
   projectId: string;
   canCancel: boolean;
   cancellingId: string | null;
   onCancel: (jobId: string) => void;
+  onRetry: (jobId: string) => void;
+  retryingId: string | null;
 }) {
   const isActive = job.status === "queued" || job.status === "processing";
   const isComplete = job.status === "completed";
@@ -124,6 +128,16 @@ function ExtractionJobRow({
               We couldn&apos;t finish processing this paper.
             </div>
           </div>
+          {canCancel && (
+            <button
+              className="button button-sm"
+              type="button"
+              onClick={() => onRetry(job.id)}
+              disabled={retryingId === job.id}
+            >
+              {retryingId === job.id ? "Retrying\u2026" : "Retry extraction"}
+            </button>
+          )}
         </div>
       )}
 
@@ -145,6 +159,16 @@ function ExtractionJobRow({
           <div>
             <div className="extraction-status-text">Cancelled</div>
           </div>
+          {canCancel && (
+            <button
+              className="button button-sm"
+              type="button"
+              onClick={() => onRetry(job.id)}
+              disabled={retryingId === job.id}
+            >
+              {retryingId === job.id ? "Retrying\u2026" : "Retry extraction"}
+            </button>
+          )}
         </div>
       )}
 
@@ -178,6 +202,7 @@ export function InlineExtraction({
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const onFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
@@ -267,6 +292,16 @@ export function InlineExtraction({
     setCancellingId(null);
   }
 
+  async function retry(jobId: string) {
+    setRetryingId(jobId);
+    const result = await retryExtractionJob(projectId, jobId);
+    if (!result.ok && result.error) {
+      setError(result.error);
+    }
+    router.refresh();
+    setRetryingId(null);
+  }
+
   const activeJobs = jobs.filter((j) => j.status === "queued" || j.status === "processing");
   const hasActiveJobs = activeJobs.length > 0;
 
@@ -321,6 +356,8 @@ export function InlineExtraction({
               canCancel={canUpload}
               cancellingId={cancellingId}
               onCancel={cancel}
+              onRetry={retry}
+              retryingId={retryingId}
             />
           ))}
         </div>

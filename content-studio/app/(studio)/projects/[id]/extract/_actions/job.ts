@@ -88,3 +88,79 @@ export async function cancelExtractionJob(
   revalidatePath(`/projects/${projectId}/extract`);
   return { error: null };
 }
+
+/**
+ * Retry a failed or cancelled extraction job.
+ * Reuses the existing source PDF and creates a new job with the same pages.
+ * If an active job already exists for this source document, returns that instead.
+ */
+export async function retryExtractionJob(
+  projectId: string,
+  jobId: string,
+): Promise<CreateJobResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "You must be signed in." };
+
+  const { data: failedJob } = await supabase
+    .from("extraction_jobs")
+    .select("id, source_document_id, requested_pages, status")
+    .eq("id", jobId)
+    .eq("project_id", projectId)
+    .single();
+
+  if (!failedJob) return { ok: false, error: "Extraction job not found." };
+  if (failedJob.status !== "failed" && failedJob.status !== "cancelled" && failedJob.status !== "completed_with_errors") {
+    return { ok: false, error: "Only failed, cancelled, or partial jobs can be retried." };
+  }
+
+  // Check for existing active job (dedup)
+  const { data: existing } = await supabase
+    .from("extraction_jobs")
+    .select("id, status")
+    .eq("source_document_id", failedJob.source_document_id)
+    .in("status", ["queued", "processing"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true, jobId: existing.id, dispatchWarning: null };
+  }
+
+  const pages = failedJob.requested_pages as number[];
+
+  // Create a new job for the same source document
+  const { data, error } = await supabase.rpc("create_extraction_job", {
+    p_project_id: projectId,
+    p_source_document_id: failedJob.source_document_id,
+    p_requested_pages: pages,
+  });
+  if (error) return { ok: false, error: `Could not retry extraction: ${error.message}` };
+
+  const newJobId = data as string;
+  revalidatePath(`/projects/${projectId}`);
+
+  // Notify
+  const { data: projectRow } = await supabase
+    .from("projects")
+    .select("title")
+    .eq("id", projectId)
+    .single();
+  await supabase.rpc("create_notification", {
+    p_user_id: user.id,
+    p_project_id: projectId,
+    p_job_id: newJobId,
+    p_kind: "extraction_started",
+    p_title: projectRow?.title ?? "Paper",
+    p_body: `Retrying extraction for ${pages.length} page${pages.length !== 1 ? "s" : ""}`,
+  });
+
+  const dispatchResult = await dispatchExtractionWorker(newJobId);
+  const dispatchWarning = dispatchResult.ok
+    ? null
+    : dispatchResult.error ?? "Worker dispatch failed \u2014 the job will be retried by the daily recovery workflow.";
+
+  return { ok: true, jobId: newJobId, dispatchWarning };
+}

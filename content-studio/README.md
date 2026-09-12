@@ -1,7 +1,30 @@
 # EUEE Content Studio
 
-The internal authoring and review web application for EUEE source content. It
-is intentionally separate from the Flutter application in the repository root.
+Internal authoring and review web application for EUEE exam content. Separate
+from the Flutter student app in the repository root.
+
+## Architecture
+
+```text
+Browser → Next.js (Vercel) → Supabase (PostgreSQL + Storage + Auth)
+                                    ↑
+Worker (GitHub Actions) ←── API Routes (shared-secret auth)
+```
+
+### User journey
+
+```text
+Login → Papers → Create paper → Upload PDF → Extract
+  → Worker claims job → Gemini extracts questions → Staging
+  → Auto-promotion to review → Review/Edit/Flag/Verify
+  → Admin approves
+```
+
+### Worker
+
+GitHub Actions workflow runs `tools/content_pipeline/providers/github_actions_worker.py`.
+Claims jobs via API, downloads PDF from Supabase Storage, runs Gemini extraction,
+uploads results page-by-page, completes and promotes questions.
 
 ## Development
 
@@ -11,87 +34,62 @@ npm install
 npm run dev
 ```
 
-Set the Supabase URL and publishable key in `.env.local`. The migration in
-`supabase/migrations/` is the source of truth for the initial M1 schema and
-RLS policies.
+Required environment variables (by name):
+
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` — Service role key (server only)
+- `WORKER_SHARED_SECRET` — Bearer token for worker API auth
+- `GITHUB_ACTIONS_DISPATCH_TOKEN` — Fine-grained GitHub PAT
+- `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_WORKFLOW_FILE`
+- `GEMINI_API_KEY`, `GEMINI_MODEL` — Worker environment
+- `PIPELINE_VERSION` — Version label for extraction pipeline
 
 ## Commands
 
 ```powershell
-npm run typecheck
-npm run lint
-npm test
-npm run build
+npm run typecheck    # TypeScript check
+npm run lint         # ESLint
+npm test             # Node.js test runner (79 tests)
+npm run build        # Production build
+python -m unittest discover tools/content_pipeline/tests -v  # Python tests (80 tests)
 ```
 
-The application does not contain Gemini credentials or a service-role key.
-Python processing remains a later worker integration with
-`tools/content_pipeline/`.
+## Security model
 
-## M1.5 Security Model
+- RLS enabled on all tables; anon access revoked everywhere
+- All mutations go through security-definer PostgreSQL RPCs
+- Worker uses service-role key + shared-secret HTTP auth
+- Source PDFs and extraction assets are private storage
+- Audit events are append-only (no direct client writes)
+- `promote_extraction_questions` is service_role only
 
-The database is the security boundary. Authenticated clients do not receive
-direct mutation privileges for projects, memberships, questions, workflow
-metadata, or audit events. Server actions call narrow PostgreSQL RPC functions;
-the RPCs derive the acting user from `auth.uid()`, acquire the parent project
-lock, enforce authorization and state transitions, and write the audit event in
-the same transaction.
+## Cost
 
-### Role permissions
+$0 operating cost under intended free tiers:
 
-| Role | Project administration | Question review | Question content edits | Image management | Audit visibility |
-| --- | --- | --- | --- | --- | --- |
-| owner | All projects and assignments | Yes | Yes | Yes | All audit history |
-| admin | All projects and assignments | Yes | Yes | Yes | All audit history |
-| reviewer | Assigned papers | Yes | Yes while reviewable | Assigned papers | No audit history |
-| uploader | Assigned papers | No verification workflow | No | Assigned papers while reviewable | No audit history |
+- Supabase free tier (500MB database, 1GB storage, 50K MAU)
+- Vercel free tier (hobby plan)
+- GitHub Actions free tier (2000 min/month)
+- Gemini free tier (rate-limited, quota-aware extraction)
 
-### Project state machine
+## Recovery
 
-```text
-draft -> in_review
-in_review -> blocked
-in_review -> ready_for_approval
-blocked -> in_review
-ready_for_approval -> approved
-approved -> exported
-approved -> in_review (admin/owner explicit question reopen only)
-archived -> terminal
-```
+- Expired worker leases automatically requeue processing pages
+- `claim_next_extraction_job` finds stale processing jobs
+- Daily cron catches any missed jobs
+- Failed extraction has a retry button in the UI
+- Notifications are idempotent (no duplicates)
 
-The database RPCs reject edits, flags, verification, image changes, and new
-questions in `approved`, `exported`, and `archived` states. Approval requires a
-locked project, locked questions, verified status and verification metadata on
-every question, and valid attached image objects.
+## Known limitations
 
-### Question mutation rules
+- Export is not implemented (status transitions to `approved` only)
+- No email/SMS/push notifications (in-app only)
+- Invite uses display_name lookup (exact match required)
+- Gemini free tier has rate limits; large papers may hit quota
 
-- `edit_question` changes only question content fields and requires a reviewer,
-  admin, or owner on a reviewable project.
-- `flag_question` records a flag and moves the project to `blocked` when needed.
-- `verify_question` sets `verified_by` from `auth.uid()` and `verified_at` from
-  the database clock; clients cannot supply either value.
-- `reopen_question` is an explicit admin/owner operation from `approved` back to
-  `in_review`.
-- `project_id`, `status`, `verified_by`, and `verified_at` are not directly
-  writable by authenticated clients.
-- `correct_answer` must be empty for unresolved content or match one of the four
-  stored choices. AI-derived answers remain non-authoritative.
+## Deployment
 
-### Images
-
-Question images are stored in the private `question-images` bucket. Paths use
-`{project_id}/{question_id}/{server-generated-file}` and are checked against
-the actual question/project relationship. Uploads happen before database
-attachment; the old object is removed only after the new reference commits.
-Attached objects cannot be directly renamed or deleted through storage policy;
-the detach RPC makes an old object unreferenced before cleanup. Unreferenced
-objects are safe cleanup candidates for a scheduled garbage-collection job.
-
-### Audit events
-
-`audit_events` is append-only for normal authenticated clients. Project
-creation, assignments, question creation and edits, flags, verification,
-reopens, image changes, status changes, and approval are written by the
-canonical security-definer RPCs. Reviewers cannot insert or read administrative
-audit history.
+- Content Studio: Vercel (auto-deploys from `master`)
+- Worker: GitHub Actions (daily cron + manual dispatch)
+- Database: Supabase (migrations in `supabase/migrations/`)

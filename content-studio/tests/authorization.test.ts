@@ -12,11 +12,10 @@ describe("role boundaries", () => {
     assert.equal(canAccessAdminSurface("uploader"), false);
   });
 
-  it("routes operational roles to the appropriate workspace", () => {
-    assert.equal(dashboardPath("owner"), "/admin");
-    assert.equal(dashboardPath("admin"), "/admin");
-    assert.equal(dashboardPath("reviewer"), "/reviewer");
-    assert.equal(dashboardPath("uploader"), "/reviewer");
+  it("routes all roles to /projects", () => {
+    for (const role of APP_ROLES) {
+      assert.equal(dashboardPath(role), "/projects");
+    }
     assert.equal(canAccessReviewerSurface("reviewer"), true);
   });
 
@@ -36,10 +35,10 @@ describe("role boundaries", () => {
     assert.deepEqual(APP_ROLES, ["owner", "admin", "reviewer", "uploader"]);
   });
 
-  it("dashboardPath returns only /admin or /reviewer", () => {
+  it("dashboardPath returns /projects for all roles", () => {
     for (const role of APP_ROLES) {
       const path = dashboardPath(role);
-      assert.ok(path === "/admin" || path === "/reviewer", `Unexpected dashboard path for ${role}: ${path}`);
+      assert.equal(path, "/projects", `Unexpected dashboard path for ${role}: ${path}`);
     }
   });
 });
