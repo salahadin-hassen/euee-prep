@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -24,18 +24,14 @@ async function hasPdfSignature(file: File): Promise<boolean> {
   return new TextDecoder().decode(bytes) === "%PDF-";
 }
 
-async function detectPdfPageCount(file: File): Promise<number | null> {
-  try {
-    const pdfjsLib = await import("pdfjs-dist");
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-    const buffer = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({ data: buffer, useSystemFonts: true }).promise;
-    const count = doc.numPages;
-    doc.destroy();
-    return count;
-  } catch {
-    return null;
-  }
+async function detectPdfPageCount(file: File): Promise<number> {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise;
+  const count = doc.numPages;
+  doc.destroy();
+  return count;
 }
 
 interface Job {
@@ -198,29 +194,50 @@ export function InlineExtraction({
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [detectedPages, setDetectedPages] = useState<number | null>(null);
+  const [detectionState, setDetectionState] = useState<"idle" | "detecting" | "success" | "error">("idle");
+  const [detectionError, setDetectionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dispatchWarning, setDispatchWarning] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const detectionTokenRef = useRef(0);
+
+  const detectPages = useCallback(async (fileToDetect: File) => {
+    const token = ++detectionTokenRef.current;
+    setDetectionState("detecting");
+    setDetectedPages(null);
+    setDetectionError(null);
+    setError(null);
+    try {
+      const count = await detectPdfPageCount(fileToDetect);
+      if (token !== detectionTokenRef.current) return;
+      setDetectedPages(count);
+      setDetectionState("success");
+    } catch (err) {
+      if (token !== detectionTokenRef.current) return;
+      console.error("[InlineExtraction] PDF page detection failed:", err instanceof Error ? err.message : err);
+      setDetectedPages(null);
+      setDetectionState("error");
+      setDetectionError("We couldn\u2019t determine the number of pages. No extraction was started.");
+    }
+  }, []);
 
   const onFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
     setFile(selected);
-    setDetectedPages(null);
-    setError(null);
     setSuccess(null);
     setDispatchWarning(null);
+    setError(null);
     if (selected && selected.type === "application/pdf") {
-      const count = await detectPdfPageCount(selected);
-      if (count && count > 0) {
-        setDetectedPages(count);
-      } else {
-        setError("We couldn't read the PDF page count. Choose a valid, readable PDF and try again.");
-      }
+      await detectPages(selected);
+    } else {
+      setDetectionState("idle");
+      setDetectedPages(null);
+      setDetectionError(null);
     }
-  }, []);
+  }, [detectPages]);
 
   async function submit() {
     setError(null);
@@ -242,8 +259,7 @@ export function InlineExtraction({
       return;
     }
 
-    if (!detectedPages) {
-      setError("Wait for the PDF page count before starting extraction.");
+    if (detectionState !== "success" || !detectedPages || detectedPages <= 0) {
       return;
     }
 
@@ -342,8 +358,26 @@ export function InlineExtraction({
           {file && (
             <p className="project-meta">
               {file.name} &middot; {formatBytes(file.size)}
-              {detectedPages ? ` \u00B7 ${detectedPages} page${detectedPages !== 1 ? "s" : ""}` : ""}
             </p>
+          )}
+          {detectionState === "detecting" && (
+            <p className="project-meta" role="status">
+              {"\u25CC"} Checking PDF pages\u2026
+            </p>
+          )}
+          {detectionState === "success" && detectedPages && (
+            <p className="project-meta" role="status">
+              {"\u2713"} {detectedPages} page{detectedPages !== 1 ? "s" : ""} detected
+            </p>
+          )}
+          {detectionState === "error" && (
+            <div className="error" role="alert">
+              <p>{"\u26A0"} Couldn{"\u2019"}t read this PDF</p>
+              <p>{detectionError}</p>
+              <button className="button button-sm" type="button" onClick={() => file && detectPages(file)}>
+                Try again
+              </button>
+            </div>
           )}
           {error && <p className="error" role="alert">{error}</p>}
           {dispatchWarning && (
@@ -356,8 +390,13 @@ export function InlineExtraction({
               {"\u2713"} {success}
             </p>
           )}
-          <button className="button" type="button" onClick={submit} disabled={pending}>
-            {pending ? "\u25CC Starting extraction\u2026" : detectedPages ? "Extract paper" : "Extract paper"}
+          <button
+            className="button"
+            type="button"
+            onClick={submit}
+            disabled={pending || detectionState !== "success"}
+          >
+            {pending ? "\u25CC Starting extraction\u2026" : "Extract paper"}
           </button>
         </div>
       )}

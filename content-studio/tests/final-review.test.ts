@@ -15,8 +15,9 @@ describe("final extraction and review workflow", () => {
 
   it("does not silently reduce an unreadable PDF to page one", () => {
     const source = read("content-studio/app/(studio)/projects/[id]/inline-extraction.tsx");
-    assert.match(source, /Wait for the PDF page count/);
+    assert.match(source, /detectionState/);
     assert.match(source, /Extract paper/);
+    assert.match(source, /Checking PDF pages/);
     assert.doesNotMatch(source, /: \[1\]/);
   });
 
