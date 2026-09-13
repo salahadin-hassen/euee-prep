@@ -2,8 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { isAdminRole, type AppRole } from "@/lib/auth/roles";
-
-export const MAX_SOURCE_PDF_BYTES = 50 * 1024 * 1024;
+import { MAX_SOURCE_PDF_BYTES } from "@/lib/extraction/constants";
 
 type ActionResult<T> = { error: string | null } & T;
 

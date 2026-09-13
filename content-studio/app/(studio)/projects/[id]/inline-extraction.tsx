@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  MAX_SOURCE_PDF_BYTES,
   prepareSourceDocumentUpload,
   registerSourceDocument,
 } from "./extract/_actions/source-document";
+import { MAX_SOURCE_PDF_BYTES } from "@/lib/extraction/constants";
 import { createExtractionJob, cancelExtractionJob, retryExtractionJob } from "./extract/_actions/job";
 
 function formatBytes(bytes: number): string {
