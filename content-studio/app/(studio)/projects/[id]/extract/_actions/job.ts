@@ -52,27 +52,38 @@ export async function createExtractionJob(
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/extract`);
 
-  // Notify the job creator that extraction has started
-  const { data: projectRow } = await supabase
-    .from("projects")
-    .select("title")
-    .eq("id", projectId)
-    .single();
-  await supabase.rpc("create_notification", {
-    p_user_id: user.id,
-    p_project_id: projectId,
-    p_job_id: jobId,
-    p_kind: "extraction_started",
-    p_title: projectRow?.title ?? "Paper",
-    p_body: `Extracting ${requestedPages.length} page${requestedPages.length !== 1 ? "s" : ""}`,
-  });
+  // Fire-and-forget: notify + dispatch in the background.
+  // The client must NOT wait for these — the job is already created and queued.
+  void (async () => {
+    try {
+      const { data: projectRow } = await supabase
+        .from("projects")
+        .select("title")
+        .eq("id", projectId)
+        .single();
+      await supabase.rpc("create_notification", {
+        p_user_id: user.id,
+        p_project_id: projectId,
+        p_job_id: jobId,
+        p_kind: "extraction_started",
+        p_title: projectRow?.title ?? "Paper",
+        p_body: `Extracting ${requestedPages.length} page${requestedPages.length !== 1 ? "s" : ""}`,
+      });
+    } catch (err) {
+      console.error("[createExtractionJob] Notification failed:", err instanceof Error ? err.message : err);
+    }
 
-  const dispatchResult = await dispatchExtractionWorker(jobId);
-  const dispatchWarning = dispatchResult.ok
-    ? null
-    : dispatchResult.error ?? "Worker dispatch failed — the job will be retried by the daily recovery workflow.";
+    try {
+      const dispatchResult = await dispatchExtractionWorker(jobId);
+      if (!dispatchResult.ok) {
+        console.error("[createExtractionJob] Dispatch failed:", dispatchResult.error);
+      }
+    } catch (err) {
+      console.error("[createExtractionJob] Dispatch failed:", err instanceof Error ? err.message : err);
+    }
+  })();
 
-  return { ok: true, jobId, dispatchWarning };
+  return { ok: true, jobId, dispatchWarning: null };
 }
 
 export async function cancelExtractionJob(
@@ -142,25 +153,35 @@ export async function retryExtractionJob(
   const newJobId = data as string;
   revalidatePath(`/projects/${projectId}`);
 
-  // Notify
-  const { data: projectRow } = await supabase
-    .from("projects")
-    .select("title")
-    .eq("id", projectId)
-    .single();
-  await supabase.rpc("create_notification", {
-    p_user_id: user.id,
-    p_project_id: projectId,
-    p_job_id: newJobId,
-    p_kind: "extraction_started",
-    p_title: projectRow?.title ?? "Paper",
-    p_body: `Retrying extraction for ${pages.length} page${pages.length !== 1 ? "s" : ""}`,
-  });
+  // Fire-and-forget: notify + dispatch in the background.
+  void (async () => {
+    try {
+      const { data: projectRow } = await supabase
+        .from("projects")
+        .select("title")
+        .eq("id", projectId)
+        .single();
+      await supabase.rpc("create_notification", {
+        p_user_id: user.id,
+        p_project_id: projectId,
+        p_job_id: newJobId,
+        p_kind: "extraction_started",
+        p_title: projectRow?.title ?? "Paper",
+        p_body: `Retrying extraction for ${pages.length} page${pages.length !== 1 ? "s" : ""}`,
+      });
+    } catch (err) {
+      console.error("[retryExtractionJob] Notification failed:", err instanceof Error ? err.message : err);
+    }
 
-  const dispatchResult = await dispatchExtractionWorker(newJobId);
-  const dispatchWarning = dispatchResult.ok
-    ? null
-    : dispatchResult.error ?? "Worker dispatch failed \u2014 the job will be retried by the daily recovery workflow.";
+    try {
+      const dispatchResult = await dispatchExtractionWorker(newJobId);
+      if (!dispatchResult.ok) {
+        console.error("[retryExtractionJob] Dispatch failed:", dispatchResult.error);
+      }
+    } catch (err) {
+      console.error("[retryExtractionJob] Dispatch failed:", err instanceof Error ? err.message : err);
+    }
+  })();
 
-  return { ok: true, jobId: newJobId, dispatchWarning };
+  return { ok: true, jobId: newJobId, dispatchWarning: null };
 }
