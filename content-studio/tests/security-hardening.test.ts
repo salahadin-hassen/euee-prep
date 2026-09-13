@@ -49,7 +49,6 @@ describe("M1.5 migration security contract", () => {
 describe("M1.5 application RPC callers", () => {
   const actionFiles = [
     "app/(studio)/_actions/project.ts",
-    "app/(studio)/_actions/member.ts",
     "app/(studio)/projects/[id]/_actions/invite.ts",
     "app/(studio)/projects/[id]/review/_actions/edit.ts",
     "app/(studio)/projects/[id]/review/_actions/flag.ts",

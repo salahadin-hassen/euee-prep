@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
 import { friendlyStatus } from "@/lib/status";
 import { InviteForm } from "./invite-form";
+import { RevokeButton } from "./revoke-button";
 import { approveProject } from "../../_actions/approval";
 import { InlineExtraction } from "./inline-extraction";
 
@@ -274,6 +275,7 @@ export default async function PaperDetailPage({
                 </div>
               </div>
               <span className="badge">{assignment.status}</span>
+              <RevokeButton assignmentId={assignment.id} />
             </div>
           ))}
         </section>
