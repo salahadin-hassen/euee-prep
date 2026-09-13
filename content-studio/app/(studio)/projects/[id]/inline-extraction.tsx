@@ -267,21 +267,30 @@ export function InlineExtraction({
 
     setPending(true);
     try {
+      console.log("[EXTRACT_CLIENT] PREPARE_START");
       const prepared = await prepareSourceDocumentUpload(projectId, file.name, file.type, file.size);
+      console.log("[EXTRACT_CLIENT] PREPARE_DONE", prepared.error ? `ERROR: ${prepared.error}` : "ok");
       if (prepared.error || !prepared.documentId || !prepared.storagePath || !prepared.token) {
         setError(prepared.error ?? "Could not prepare upload.");
         return;
       }
 
       const supabase = createClient();
+      console.log("[EXTRACT_CLIENT] UPLOAD_START");
       const { error: uploadError } = await supabase.storage
         .from("source-pdfs")
         .uploadToSignedUrl(prepared.storagePath, prepared.token, file);
+      console.log("[EXTRACT_CLIENT] UPLOAD_DONE", uploadError ? `ERROR: ${uploadError.message}` : "ok");
       if (uploadError) {
         setError(`Upload failed: ${uploadError.message}`);
         return;
       }
 
+      console.log("[EXTRACT_CLIENT] HASH_START");
+      const hash = await sha256Hex(file);
+      console.log("[EXTRACT_CLIENT] HASH_DONE");
+
+      console.log("[EXTRACT_CLIENT] REGISTER_START");
       const registered = await registerSourceDocument({
         projectId,
         documentId: prepared.documentId,
@@ -289,25 +298,32 @@ export function InlineExtraction({
         originalFilename: file.name,
         mimeType: file.type,
         byteSize: file.size,
-        sha256: await sha256Hex(file),
+        sha256: hash,
       });
+      console.log("[EXTRACT_CLIENT] REGISTER_DONE", registered.error ? `ERROR: ${registered.error}` : "ok");
       if (registered.error || !registered.documentId) {
         setError(registered.error ?? "Could not register PDF.");
         return;
       }
 
+      console.log("[EXTRACT_CLIENT] JOB_START");
       const job = await createExtractionJob(projectId, registered.documentId, pages);
+      console.log("[EXTRACT_CLIENT] JOB_DONE", job.ok ? `jobId=${job.jobId}` : `ERROR: ${job.error}`);
       if (!job.ok) {
         setError(job.error);
         return;
       }
 
+      console.log("[EXTRACT_CLIENT] SETTING_SUCCESS");
       setFile(null);
       setDetectedPages(null);
       setSuccess("Extraction started");
       setDispatchWarning(job.dispatchWarning);
+      console.log("[EXTRACT_CLIENT] REFRESHING");
       router.refresh();
+      console.log("[EXTRACT_CLIENT] REFRESH_DONE");
     } finally {
+      console.log("[EXTRACT_CLIENT] FINALLY setPending(false)");
       setPending(false);
     }
   }

@@ -19,10 +19,16 @@ export async function createExtractionJob(
   sourceDocumentId: string,
   requestedPages: number[],
 ): Promise<CreateJobResult> {
+  console.log(`[EXTRACT:createExtractionJob] START src=${sourceDocumentId} pages=${requestedPages.length}`);
+  const t0 = Date.now();
   const supabase = await createClient();
+  console.log(`[EXTRACT:createExtractionJob:createClient] ${Date.now() - t0}ms`);
+  const t1 = Date.now();
   const { data: { user } } = await supabase.auth.getUser();
+  console.log(`[EXTRACT:createExtractionJob:getUser] ${Date.now() - t1}ms`);
   if (!user) return { ok: false, error: "You must be signed in." };
 
+  const t2 = Date.now();
   const { data: existing, error: existingError } = await supabase
     .from("extraction_jobs")
     .select("id, status")
@@ -31,22 +37,26 @@ export async function createExtractionJob(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  console.log(`[EXTRACT:createExtractionJob:dedup] ${Date.now() - t2}ms existing=${existing?.id ?? "none"}`);
 
   if (existingError) {
     console.error("[createExtractionJob] Dedup query failed:", existingError.message);
   }
 
   if (existing) {
+    console.log(`[EXTRACT:createExtractionJob] DEDUP_HIT jobId=${existing.id}`);
     revalidatePath(`/projects/${projectId}`);
     return { ok: true, jobId: existing.id, dispatchWarning: null };
   }
 
+  const t3 = Date.now();
   const { data, error } = await supabase.rpc("create_extraction_job", {
     p_project_id: projectId,
     p_source_document_id: sourceDocumentId,
     p_requested_pages: requestedPages,
   });
-  if (error) return { ok: false, error: `Could not create extraction job: ${error.message}` };
+  console.log(`[EXTRACT:createExtractionJob:rpc] ${Date.now() - t3}ms`);
+  if (error) { console.error(`[EXTRACT:createExtractionJob] RPC_ERROR: ${error.message}`); return { ok: false, error: `Could not create extraction job: ${error.message}` }; }
 
   const jobId = data as string;
   revalidatePath(`/projects/${projectId}`);
@@ -83,6 +93,7 @@ export async function createExtractionJob(
     }
   })();
 
+  console.log(`[EXTRACT:createExtractionJob] RETURNING jobId=${jobId}`);
   return { ok: true, jobId, dispatchWarning: null };
 }
 
