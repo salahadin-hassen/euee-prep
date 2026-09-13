@@ -154,10 +154,10 @@ export default async function PaperDetailPage({
     : { data: [] };
   const rawAssignments = assignmentRows ?? [];
   const reviewerIds = rawAssignments.map((assignment) => assignment.reviewer_id);
-  const { data: reviewerProfiles } = reviewerIds.length > 0
+  const { data: assignmentReviewerProfiles } = reviewerIds.length > 0
     ? await supabase.from("profiles").select("id, display_name").in("id", reviewerIds)
     : { data: [] };
-  const profileById = new Map((reviewerProfiles ?? []).map((profile) => [profile.id, profile]));
+  const profileById = new Map((assignmentReviewerProfiles ?? []).map((profile) => [profile.id, profile]));
   const assignments = rawAssignments.map((assignment) => ({
     ...assignment,
     profiles: profileById.get(assignment.reviewer_id) ?? null,
@@ -179,6 +179,15 @@ export default async function PaperDetailPage({
     .select("id", { count: "exact", head: true })
     .eq("project_id", id)
     .eq("status", "flagged");
+
+  const { data: reviewerProfiles } = isAdmin
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .eq("role", "reviewer")
+        .order("display_name", { ascending: true })
+    : { data: [] };
+  const reviewerList = (reviewerProfiles ?? []) as { id: string; display_name: string | null }[];
 
   const hasQuestions = (totalQuestions ?? 0) > 0;
 
@@ -281,7 +290,7 @@ export default async function PaperDetailPage({
         </section>
       )}
 
-      {isAdmin && <InviteForm projectId={typed.id} />}
+      {isAdmin && <InviteForm projectId={typed.id} reviewers={reviewerList} />}
     </main>
   );
 }

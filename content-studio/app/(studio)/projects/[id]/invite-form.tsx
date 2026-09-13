@@ -4,13 +4,19 @@ import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { inviteHelper, type InviteState } from "./_actions/invite";
 
+interface ReviewerOption {
+  id: string;
+  display_name: string | null;
+}
+
 interface InviteFormProps {
   projectId: string;
+  reviewers: ReviewerOption[];
 }
 
 const initialState: InviteState = { error: null, success: false };
 
-export function InviteForm({ projectId }: InviteFormProps) {
+export function InviteForm({ projectId, reviewers }: InviteFormProps) {
   const [state, formAction, pending] = useActionState(inviteHelper, initialState);
   const router = useRouter();
 
@@ -26,14 +32,18 @@ export function InviteForm({ projectId }: InviteFormProps) {
       <form className="form" action={formAction}>
         <input type="hidden" name="project_id" value={projectId} />
           <label>
-            Reviewer name
-          <input
-            type="text"
-            name="display_name"
-            required
-            placeholder="Type their unique display name"
-          />
-        </label>
+            Reviewer
+            <select name="display_name" required defaultValue="">
+              <option value="" disabled>
+                {reviewers.length === 0 ? "No reviewers found" : "Choose a reviewer"}
+              </option>
+              {reviewers.map((r) => (
+                <option key={r.id} value={r.display_name ?? ""}>
+                  {r.display_name ?? "Unnamed"}
+                </option>
+              ))}
+            </select>
+          </label>
         <div className="choice-row">
           <label>
             From question
@@ -52,7 +62,7 @@ export function InviteForm({ projectId }: InviteFormProps) {
             Reviewer assigned.
           </p>
         )}
-        <button className="button" type="submit" disabled={pending}>
+        <button className="button" type="submit" disabled={pending || reviewers.length === 0}>
           {pending ? "Assigning..." : "Assign reviewer"}
         </button>
       </form>

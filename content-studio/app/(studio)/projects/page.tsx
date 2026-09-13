@@ -14,6 +14,12 @@ interface ReviewAssignment {
   status: string;
 }
 
+interface QuestionRow {
+  project_id: string;
+  order_index: number;
+  status: string;
+}
+
 export default async function PapersPage() {
   const supabase = await createClient();
   const {
@@ -31,6 +37,7 @@ export default async function PapersPage() {
 
   let projectsQuery = supabase.from("projects").select("id, title, subject, exam_year, status");
   let assignments: ReviewAssignment[] = [];
+  const progressByAssignment = new Map<string, { total: number; verified: number }>();
 
   if (!admin && role === "reviewer") {
     const { data: assignmentRows } = await supabase
@@ -50,6 +57,27 @@ export default async function PapersPage() {
       );
     }
     projectsQuery = projectsQuery.in("id", projectIds);
+
+    const { data: questionRows } = projectIds.length > 0
+      ? await supabase
+          .from("questions")
+          .select("project_id, order_index, status")
+          .in("project_id", projectIds)
+      : { data: [] };
+    const allQuestions = (questionRows ?? []) as QuestionRow[];
+
+    for (const assignment of assignments) {
+      const inScope = allQuestions.filter((q) => {
+        if (q.project_id !== assignment.project_id) return false;
+        if (assignment.start_order_index !== null && q.order_index < assignment.start_order_index) return false;
+        if (assignment.end_order_index !== null && q.order_index > assignment.end_order_index) return false;
+        return true;
+      });
+      progressByAssignment.set(assignment.id, {
+        total: inScope.length,
+        verified: inScope.filter((q) => q.status === "verified").length,
+      });
+    }
   } else if (!admin) {
     return (
       <main className="content">
@@ -63,10 +91,10 @@ export default async function PapersPage() {
     ascending: false,
   });
   const workItems = admin
-    ? (projects ?? []).map((paper) => ({ paper, assignment: null as ReviewAssignment | null }))
+    ? (projects ?? []).map((paper) => ({ paper, assignment: null as ReviewAssignment | null, progress: null as { total: number; verified: number } | null }))
     : (projects ?? []).flatMap((paper) => assignments
       .filter((assignment) => assignment.project_id === paper.id)
-      .map((assignment) => ({ paper, assignment })));
+      .map((assignment) => ({ paper, assignment, progress: progressByAssignment.get(assignment.id) ?? null })));
 
   return (
     <main className="content">
@@ -83,7 +111,7 @@ export default async function PapersPage() {
         {!(projects?.length) ? (
           <p className="empty">No papers yet.</p>
         ) : (
-          workItems.map(({ paper: p, assignment }) => {
+          workItems.map(({ paper: p, assignment, progress }) => {
             const rangeLabel = assignment?.start_order_index === null || !assignment
               ? "Whole paper"
               : `Questions ${assignment.start_order_index + 1}-${(assignment.end_order_index ?? assignment.start_order_index) + 1}`;
@@ -98,7 +126,14 @@ export default async function PapersPage() {
                 </Link>
                 <div className="project-meta">
                   {p.subject} &middot; EC {p.exam_year}
-                  {!admin && <> &middot; {rangeLabel}</>}
+                  {!admin && (
+                    <>
+                      {" "}&middot; {rangeLabel}
+                      {progress && progress.total > 0 && (
+                        <> &middot; {progress.verified}/{progress.total} verified</>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
               {admin ? (
