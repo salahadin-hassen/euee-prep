@@ -101,18 +101,14 @@ describe("extraction-to-review promotion", () => {
     );
   });
 
-  it("paper detail page shows extraction summary", () => {
+  it("paper detail page shows import form when no questions exist", () => {
     const pageSource = readFileSync(
       resolve(process.cwd(), "app/(studio)/projects/[id]/page.tsx"),
       "utf8",
     );
     assert.ok(
-      pageSource.includes("ExtractionSummary"),
-      "Paper page must render ExtractionSummary component",
-    );
-    assert.ok(
-      pageSource.includes("Ready for review"),
-      "Paper page must show Ready for review status",
+      pageSource.includes("ImportQuestionsForm"),
+      "Paper page must render ImportQuestionsForm for admins",
     );
   });
 

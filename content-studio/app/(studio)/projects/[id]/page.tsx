@@ -6,7 +6,7 @@ import { friendlyStatus } from "@/lib/status";
 import { InviteForm } from "./invite-form";
 import { RevokeButton } from "./revoke-button";
 import { approveProject } from "../../_actions/approval";
-import { InlineExtraction } from "./inline-extraction";
+import { ImportQuestionsForm } from "./import-questions-form";
 
 export const dynamic = "force-dynamic";
 
@@ -35,75 +35,8 @@ interface AssignmentRow {
   profiles: { display_name: string | null } | null;
 }
 
-interface ExtractJob {
-  id: string;
-  source_document_id: string;
-  requested_pages: number[];
-  status: string;
-  total_pages: number;
-  completed_pages: number;
-  failed_pages: number;
-  created_at: string;
-  completed_at: string | null;
-}
-
 function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
-
-function ExtractionSummary({ jobs, questionCount }: { jobs: ExtractJob[]; questionCount: number }) {
-  const latest = jobs[0];
-  if (!latest) return null;
-
-  const isActive = latest.status === "queued" || latest.status === "processing";
-  const isComplete = latest.status === "completed";
-  const hasIssues = latest.status === "completed_with_errors";
-  const isFailed = latest.status === "failed";
-
-  if (isActive) {
-    return (
-      <div className="extraction-summary extraction-summary--processing">
-        <span className="extraction-summary-icon" aria-hidden="true">{"\u25CC"}</span>
-        <span>
-          Extracting {latest.completed_pages} / {latest.requested_pages.length} pages
-        </span>
-      </div>
-    );
-  }
-
-  if (isComplete) {
-    return (
-      <div className="extraction-summary extraction-summary--ready">
-        <span className="extraction-summary-icon" aria-hidden="true">{"\u2713"}</span>
-        <span>
-          Ready for review &middot; {questionCount} question{questionCount !== 1 ? "s" : ""} ready
-        </span>
-      </div>
-    );
-  }
-
-  if (hasIssues) {
-    return (
-      <div className="extraction-summary extraction-summary--issues">
-        <span className="extraction-summary-icon" aria-hidden="true">{"\u26A0"}</span>
-        <span>
-          Completed with issues ({latest.completed_pages} of {latest.requested_pages.length} pages)
-          {questionCount > 0 && <> &middot; {questionCount} question{questionCount !== 1 ? "s" : ""} ready</>}
-        </span>
-      </div>
-    );
-  }
-
-  if (isFailed) {
-    return (
-      <div className="extraction-summary extraction-summary--failed">
-        <span className="extraction-summary-icon" aria-hidden="true">{"\u2717"}</span>
-        <span>Extraction failed</span>
-      </div>
-    );
-  }
-
-  return null;
 }
 
 export default async function PaperDetailPage({
@@ -143,7 +76,6 @@ export default async function PaperDetailPage({
     .order("assigned_at", { ascending: true });
 
   const members = (memberRows ?? []) as unknown as MemberRow[];
-  const canUploadSource = isAdmin || (role === "uploader" && members.some((m) => m.user_id === user.id));
 
   const { data: assignmentRows } = isAdmin
     ? await supabase
@@ -191,16 +123,6 @@ export default async function PaperDetailPage({
 
   const hasQuestions = (totalQuestions ?? 0) > 0;
 
-  const [{ data: extractionJobs }] = await Promise.all([
-    supabase
-      .from("extraction_jobs")
-      .select("id, source_document_id, requested_pages, status, total_pages, completed_pages, failed_pages, created_at, completed_at")
-      .eq("project_id", id)
-      .order("created_at", { ascending: false }),
-  ]);
-
-  const jobs = (extractionJobs ?? []) as ExtractJob[];
-
   return (
     <main className="content">
       <div className="paper-header">
@@ -244,15 +166,17 @@ export default async function PaperDetailPage({
         </div>
       )}
 
-      {jobs.length > 0 && !typed.status.startsWith("approved") && (
-        <ExtractionSummary jobs={jobs} questionCount={totalQuestions ?? 0} />
+      {isAdmin && !hasQuestions && (
+        <ImportQuestionsForm projectId={typed.id} />
       )}
 
-      <InlineExtraction
-        projectId={typed.id}
-        jobs={jobs}
-        canUpload={canUploadSource}
-      />
+      {hasQuestions && !typed.status.startsWith("approved") && (
+        <div className="panel" style={{ background: "#e8f5f0", border: "none" }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>
+            {"\u2713"} {totalQuestions} question{totalQuestions !== 1 ? "s" : ""} imported &middot; ready for review
+          </p>
+        </div>
+      )}
 
       {members.length > 0 && (
         <section className="panel">
