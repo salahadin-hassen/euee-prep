@@ -35,6 +35,18 @@ interface AssignmentRow {
   profiles: { display_name: string | null } | null;
 }
 
+interface QuestionSummary {
+  id: string;
+  order_index: number;
+  question_text: string;
+  status: string;
+  flag_note: string | null;
+  image_path: string | null;
+  source_pdf_page: number | null;
+  ai_predicted_choice_index: number | null;
+  correct_answer: string;
+}
+
 function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
@@ -112,17 +124,28 @@ export default async function PaperDetailPage({
     .eq("project_id", id)
     .eq("status", "flagged");
 
+  const { count: unverifiedCount } = await supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", id)
+    .eq("status", "unverified");
+
   const assignmentProgress: Record<string, { verified: number; total: number }> = {};
-  if (assignments.length > 0 && (totalQuestions ?? 0) > 0) {
+  let allQuestionsForList: QuestionSummary[] = [];
+
+  if ((totalQuestions ?? 0) > 0) {
     const { data: allQuestions } = await supabase
       .from("questions")
-      .select("order_index, status")
-      .eq("project_id", id);
+      .select("id, order_index, question_text, status, flag_note, image_path, source_pdf_page, ai_predicted_choice_index, correct_answer")
+      .eq("project_id", id)
+      .order("order_index", { ascending: true });
+
+    allQuestionsForList = (allQuestions ?? []) as QuestionSummary[];
 
     for (const assignment of assignments) {
       const start = assignment.start_order_index;
       const end = assignment.end_order_index;
-      const scoped = (allQuestions ?? []).filter((q) => {
+      const scoped = allQuestionsForList.filter((q) => {
         if (start === null || end === null) return true;
         return q.order_index >= start && q.order_index <= end;
       });
@@ -143,6 +166,12 @@ export default async function PaperDetailPage({
   const reviewerList = (reviewerProfiles ?? []) as { id: string; display_name: string | null }[];
 
   const hasQuestions = (totalQuestions ?? 0) > 0;
+  const flaggedList = allQuestionsForList.filter((q) => q.status === "flagged");
+  const needsAttention = allQuestionsForList.filter((q) =>
+    q.status === "flagged"
+    || q.status === "unverified"
+    || !q.correct_answer
+  );
 
   return (
     <main className="content">
@@ -159,22 +188,32 @@ export default async function PaperDetailPage({
       </div>
 
       {hasQuestions && (
-        <div className="paper-stats">
-          <span className="stat-inline">
-            {verifiedQuestions ?? 0}/{totalQuestions ?? 0} verified
-          </span>
+        <div className="qa-stats">
+          <div className="qa-stat">
+            <span className="qa-stat-value">{totalQuestions}</span>
+            <span className="qa-stat-label">Questions</span>
+          </div>
+          <div className="qa-stat">
+            <span className="qa-stat-value">{verifiedQuestions ?? 0} / {totalQuestions}</span>
+            <span className="qa-stat-label">Verified</span>
+          </div>
+          <div className="qa-stat">
+            <span className="qa-stat-value">{unverifiedCount ?? 0}</span>
+            <span className="qa-stat-label">Unchecked</span>
+          </div>
           {(flaggedQuestions ?? 0) > 0 && (
-            <span className="stat-inline stat-flagged">
-              {flaggedQuestions} flagged
-            </span>
+            <div className="qa-stat qa-stat--flagged">
+              <span className="qa-stat-value">{flaggedQuestions}</span>
+              <span className="qa-stat-label">Flagged</span>
+            </div>
           )}
           {isAdmin && typed.status === "ready_for_approval" && (
-            <form action={approveProject} style={{ display: "inline" }}>
-              <input type="hidden" name="project_id" value={typed.id} />
-              <button className="button button-sm" type="submit">
-                Approve
-              </button>
-            </form>
+            <div className="qa-stat">
+              <form action={approveProject}>
+                <input type="hidden" name="project_id" value={typed.id} />
+                <button className="button button-sm" type="submit">Approve</button>
+              </form>
+            </div>
           )}
         </div>
       )}
@@ -197,6 +236,40 @@ export default async function PaperDetailPage({
             {"\u2713"} {totalQuestions} question{totalQuestions !== 1 ? "s" : ""} imported &middot; ready for review
           </p>
         </div>
+      )}
+
+      {isAdmin && flaggedList.length > 0 && (
+        <section className="panel panel--flagged">
+          <div className="panel-head">
+            <h2>Issues ({flaggedList.length})</h2>
+          </div>
+          {flaggedList.map((q) => (
+            <div className="question-row question-row--flagged" key={q.id}>
+              <div className="question-row-info">
+                <Link className="question-row-link" href={`/projects/${id}/review?q=${q.order_index + 1}`}>
+                  Q{q.order_index + 1}
+                </Link>
+                <span className="question-row-text">
+                  {q.question_text.length > 80 ? q.question_text.slice(0, 80) + "..." : q.question_text}
+                </span>
+              </div>
+              <div className="question-row-meta">
+                {q.flag_note && <span className="flag-note">{q.flag_note}</span>}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {isAdmin && needsAttention.length > 0 && needsAttention.length !== flaggedList.length && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Needs attention ({needsAttention.length})</h2>
+          </div>
+          <p className="project-meta" style={{ margin: 0 }}>
+            Unchecked questions or questions with extraction issues
+          </p>
+        </section>
       )}
 
       {members.length > 0 && (
@@ -252,6 +325,31 @@ export default async function PaperDetailPage({
       )}
 
       {isAdmin && <InviteForm projectId={typed.id} reviewers={reviewerList} totalQuestions={totalQuestions ?? 0} />}
+
+      {isAdmin && hasQuestions && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Questions ({totalQuestions})</h2>
+          </div>
+          <div className="question-list">
+            {allQuestionsForList.map((q) => {
+              const statusIcon = q.status === "verified" ? "\u2713" : q.status === "flagged" ? "\u26A0" : "\u25CB";
+              const statusClass = q.status === "verified" ? "ql-verified" : q.status === "flagged" ? "ql-flagged" : "ql-unverified";
+              return (
+                <div className={`question-list-item ${statusClass}`} key={q.id}>
+                  <Link className="question-list-link" href={`/projects/${id}/review?q=${q.order_index + 1}`}>
+                    <span className="question-list-num">Q{q.order_index + 1}</span>
+                    <span className="question-list-status">{statusIcon}</span>
+                    <span className="question-list-text">
+                      {q.question_text.length > 60 ? q.question_text.slice(0, 60) + "..." : q.question_text}
+                    </span>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
