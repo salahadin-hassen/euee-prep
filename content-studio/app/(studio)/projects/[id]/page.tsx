@@ -112,6 +112,27 @@ export default async function PaperDetailPage({
     .eq("project_id", id)
     .eq("status", "flagged");
 
+  const assignmentProgress: Record<string, { verified: number; total: number }> = {};
+  if (assignments.length > 0 && (totalQuestions ?? 0) > 0) {
+    const { data: allQuestions } = await supabase
+      .from("questions")
+      .select("order_index, status")
+      .eq("project_id", id);
+
+    for (const assignment of assignments) {
+      const start = assignment.start_order_index;
+      const end = assignment.end_order_index;
+      const scoped = (allQuestions ?? []).filter((q) => {
+        if (start === null || end === null) return true;
+        return q.order_index >= start && q.order_index <= end;
+      });
+      assignmentProgress[assignment.id] = {
+        verified: scoped.filter((q) => q.status === "verified").length,
+        total: scoped.length,
+      };
+    }
+  }
+
   const { data: reviewerProfiles } = isAdmin
     ? await supabase
         .from("profiles")
@@ -197,24 +218,40 @@ export default async function PaperDetailPage({
       {isAdmin && assignments.length > 0 && (
         <section className="panel">
           <div className="panel-head"><h2>Review assignments</h2></div>
-          {assignments.map((assignment) => (
-            <div className="project-row" key={assignment.id}>
-              <div>
-                <div className="project-title">{assignment.profiles?.display_name || "Reviewer"}</div>
-                <div className="project-meta">
-                  {assignment.start_order_index === null
-                    ? "Whole paper"
-                    : `Questions ${assignment.start_order_index + 1}-${(assignment.end_order_index ?? assignment.start_order_index) + 1}`}
+          {assignments.map((assignment) => {
+            const progress = assignmentProgress[assignment.id];
+            const rangeLabel = assignment.start_order_index === null
+              ? "Whole paper"
+              : `Questions ${assignment.start_order_index + 1}\u2013${(assignment.end_order_index ?? assignment.start_order_index) + 1}`;
+            const statusLabel = assignment.status === "in_progress"
+              ? "In progress"
+              : assignment.status === "completed"
+                ? "Completed"
+                : "Assigned";
+            return (
+              <div className="assignment-row" key={assignment.id}>
+                <div className="assignment-info">
+                  <div className="project-title">{assignment.profiles?.display_name || "Reviewer"}</div>
+                  <div className="project-meta">{rangeLabel}</div>
+                  {progress && (
+                    <div className="assignment-progress">
+                      {progress.verified} / {progress.total} verified
+                    </div>
+                  )}
+                </div>
+                <div className="assignment-actions">
+                  <span className={`badge badge--${assignment.status === "completed" ? "completed" : assignment.status === "in_progress" ? "active" : "assigned"}`}>
+                    {statusLabel}
+                  </span>
+                  <RevokeButton assignmentId={assignment.id} />
                 </div>
               </div>
-              <span className="badge">{assignment.status}</span>
-              <RevokeButton assignmentId={assignment.id} />
-            </div>
-          ))}
+            );
+          })}
         </section>
       )}
 
-      {isAdmin && <InviteForm projectId={typed.id} reviewers={reviewerList} />}
+      {isAdmin && <InviteForm projectId={typed.id} reviewers={reviewerList} totalQuestions={totalQuestions ?? 0} />}
     </main>
   );
 }

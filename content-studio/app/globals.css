@@ -144,6 +144,45 @@ h2 { font: 700 23px/1.2 Georgia, serif; margin: 0; }
 .choice-row input { flex: 1 1 0; min-width: 0; }
 .choice-row .signout { flex-shrink: 0; }
 
+/* Assignment rows */
+.assignment-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 0; border-top: 1px solid var(--line); }
+.assignment-row:first-child { border-top: 0; }
+.assignment-info { min-width: 0; flex: 1; }
+.assignment-progress { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.assignment-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+/* Badge variants */
+.badge--assigned { background: #edf3ef; color: var(--teal-deep); }
+.badge--active { background: #d4ecf7; color: #1a5276; }
+.badge--completed { background: #e8f5f0; color: var(--teal); }
+
+/* Assign reviewer button */
+.button--assign { background: transparent; color: var(--teal); border: 2px dashed var(--teal); padding: 14px 20px; font-size: 14px; width: 100%; }
+.button--assign:hover { background: #e8f5f0; border-style: solid; }
+.button--assign:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--line); color: var(--muted); }
+
+/* Invite form */
+.invite-form { margin-top: 0; }
+
+/* Scope fieldset */
+.scope-fieldset { border: 0; padding: 0; margin: 0; }
+.scope-fieldset legend { display: block; color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 400; color: var(--ink); cursor: pointer; padding: 4px 0; }
+.radio-label input[type="radio"] { accent-color: var(--teal); width: 16px; height: 16px; }
+.radio-hint { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+/* Range inputs */
+.range-inputs { display: flex; gap: 10px; align-items: end; }
+.range-inputs label { flex: 1; }
+.range-preview { padding: 10px 14px; background: #e8f5f0; border-radius: 7px; font-size: 13px; font-weight: 700; color: var(--teal-deep); white-space: nowrap; align-self: end; margin-bottom: 1px; }
+
+/* Invite form actions */
+.invite-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+.button--cancel { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.button--cancel:hover { background: #f0f4f2; }
+.button--revoke { background: transparent; color: #a33d32; border: 1px solid #e0c4be; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+.button--revoke:hover { background: #fff0ed; border-color: #a33d32; }
+
 @media (max-width: 760px) {
   .shell { grid-template-columns: 1fr; }
 
@@ -191,6 +230,14 @@ h2 { font: 700 23px/1.2 Georgia, serif; margin: 0; }
 
   /* Choice rows */
   .choice-row { gap: 6px; }
+
+  /* Assignment rows */
+  .assignment-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .assignment-actions { width: 100%; justify-content: space-between; }
+
+  /* Range inputs */
+  .range-inputs { flex-direction: column; }
+  .range-preview { align-self: stretch; text-align: center; }
 }
 
 @media (max-width: 400px) {

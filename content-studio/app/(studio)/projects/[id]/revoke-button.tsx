@@ -27,7 +27,7 @@ export function RevokeButton({ assignmentId }: { assignmentId: string }) {
   return (
     <>
       <button
-        className="signout"
+        className="button button--revoke"
         type="button"
         onClick={() => setConfirming(true)}
       >
