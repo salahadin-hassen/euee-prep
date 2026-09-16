@@ -5,6 +5,7 @@ import { canAccessAdminSurface, type AppRole } from "@/lib/auth/roles";
 import { friendlyStatus } from "@/lib/status";
 import { InviteForm } from "./invite-form";
 import { RevokeButton } from "./revoke-button";
+import { ExportButton } from "./export-button";
 import { approveProject } from "../../_actions/approval";
 import { ImportQuestionsForm } from "./import-questions-form";
 
@@ -213,6 +214,11 @@ export default async function PaperDetailPage({
                 <input type="hidden" name="project_id" value={typed.id} />
                 <button className="button button-sm" type="submit">Approve</button>
               </form>
+            </div>
+          )}
+          {isAdmin && typed.status === "approved" && (
+            <div className="qa-stat">
+              <ExportButton projectId={typed.id} />
             </div>
           )}
         </div>
