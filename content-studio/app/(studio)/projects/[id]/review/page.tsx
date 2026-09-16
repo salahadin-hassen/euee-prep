@@ -157,7 +157,7 @@ export default async function ReviewPage({
             <h1>Review complete</h1>
             <p className="lede">{verifiedCount} of {scopedQuestions.length} assigned questions verified.</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="review-actions">
             {!admin && <Link className="button" href="/projects">My work</Link>}
             <Link className="button" href={`/projects/${id}`}>Back to paper</Link>
           </div>
@@ -177,7 +177,7 @@ export default async function ReviewPage({
             {assignment && <> · {assignment.start_order_index === null ? "Whole paper" : `Questions ${assignment.start_order_index + 1}-${(assignment.end_order_index ?? assignment.start_order_index) + 1}`}</>}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="review-actions">
           {!admin && <Link className="button" href="/projects">My work</Link>}
           <Link className="button" href={`/projects/${id}`}>Back to paper</Link>
         </div>

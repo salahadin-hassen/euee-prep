@@ -183,53 +183,91 @@ h2 { font: 700 23px/1.2 Georgia, serif; margin: 0; }
 .button--revoke { background: transparent; color: #a33d32; border: 1px solid #e0c4be; padding: 6px 12px; font-size: 12px; font-weight: 700; }
 .button--revoke:hover { background: #fff0ed; border-color: #a33d32; }
 
+/* Review page actions */
+.review-actions { display: flex; gap: 8px; }
+
 @media (max-width: 760px) {
   .shell { grid-template-columns: 1fr; }
 
-  /* Sidebar becomes a top bar */
-  .sidebar { padding: 14px 16px; gap: 0; flex-direction: row; align-items: center; overflow-x: auto; }
+  /* Sidebar becomes a compact top bar */
+  .sidebar {
+    padding: 10px 14px; gap: 0; flex-direction: row; align-items: center;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
   .sidebar .brand { font-size: 14px; }
-  .sidebar .brand-mark { width: 26px; height: 26px; font-size: 13px; }
-  .nav { flex-direction: row; gap: 2px; overflow-x: auto; flex: 1; }
-  .nav a { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+  .sidebar .brand-mark { width: 28px; height: 28px; font-size: 13px; }
+  .nav { flex-direction: row; gap: 2px; overflow-x: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+  .nav a {
+    padding: 10px 12px; font-size: 13px; white-space: nowrap;
+    min-height: 40px; display: flex; align-items: center;
+  }
   .sidebar-note { display: none; }
-  .sidebar .signout { margin-left: auto; font-size: 11px; }
+  .sidebar .signout { margin-left: auto; font-size: 11px; min-height: 40px; display: flex; align-items: center; }
 
-  /* Main area */
-  .topbar { min-height: auto; padding: 12px 16px; }
+  /* Top bar */
+  .topbar { min-height: auto; padding: 10px 16px; gap: 10px; }
   .topbar .eyebrow { font-size: 10px; }
-  .content { padding: 20px 16px; }
+  .user-chip { font-size: 12px; gap: 8px; }
+  .avatar { width: 28px; height: 28px; font-size: 11px; }
+
+  /* Content area */
+  .content { padding: 16px; }
 
   /* Hero stacks vertically */
-  .hero { display: flex; flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 24px; }
-  .hero .button { align-self: flex-start; }
+  .hero {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: 12px; margin-bottom: 20px;
+  }
+  .hero .button { align-self: stretch; min-height: 44px; }
 
   /* Stats go single column */
   .grid { grid-template-columns: 1fr; }
 
   /* Panels */
-  .panel { padding: 18px; margin-top: 16px; }
+  .panel { padding: 16px; margin-top: 14px; }
   .panel-head { flex-wrap: wrap; gap: 8px; }
 
-  /* Project rows can wrap */
-  .project-row { flex-wrap: wrap; gap: 10px; }
+  /* Buttons - larger touch targets */
+  .button {
+    min-height: 44px; padding: 12px 16px; font-size: 15px;
+    border-radius: 8px; width: 100%;
+  }
+  .button.button-sm { min-height: 40px; padding: 10px 14px; font-size: 13px; }
+
+  /* Project rows */
+  .project-row { flex-wrap: wrap; gap: 10px; padding: 14px 0; }
   .project-row .badge { align-self: flex-start; }
+
+  /* Forms - touch friendly */
+  .form { margin-top: 16px; gap: 14px; }
+  .form label { font-size: 14px; gap: 6px; }
+  .form input, .form textarea, .form select {
+    padding: 12px; font-size: 16px; /* Prevents iOS zoom */
+    min-height: 44px; border-radius: 8px;
+  }
+  .form textarea { min-height: 80px; }
 
   /* Auth card */
   .auth-card { padding: 24px; }
   .auth-card h1 { font-size: 28px; }
-
-  /* Forms */
-  .form { margin-top: 20px; gap: 12px; }
-  .form input, .form textarea { padding: 10px; }
 
   /* Flex wrap utilities */
   .flex-wrap { gap: 8px; }
   .btn-stack { gap: 8px; }
   .btn-stack > .button, .btn-stack > form > .button { flex: 1 1 100%; }
 
-  /* Choice rows */
-  .choice-row { gap: 6px; }
+  /* Choice rows - stack on mobile */
+  .choice-row { gap: 6px; flex-wrap: wrap; }
+  .choice-row label {
+    flex: 1 1 calc(50% - 3px); min-width: 0;
+    min-height: 44px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+    font-size: 16px; cursor: pointer;
+  }
+  .choice-row label:has(input:checked) {
+    border-color: var(--teal); background: #e8f5f0;
+  }
+  .choice-row input[type="radio"] { width: 18px; height: 18px; margin-right: 6px; }
 
   /* Assignment rows */
   .assignment-row { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -238,12 +276,35 @@ h2 { font: 700 23px/1.2 Georgia, serif; margin: 0; }
   /* Range inputs */
   .range-inputs { flex-direction: column; }
   .range-preview { align-self: stretch; text-align: center; }
+
+  /* Invite form actions */
+  .invite-form-actions { flex-direction: column; gap: 8px; }
+  .invite-form-actions .button { width: 100%; }
+
+  /* Notification dropdown - full width on mobile */
+  .notification-dropdown {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+    width: 100%; max-height: 70vh; border-radius: 14px 14px 0 0;
+    margin: 0; box-shadow: 0 -4px 20px rgba(0,0,0,.15);
+  }
+
+  /* Review page */
+  .review-actions { flex-direction: column; width: 100%; }
+  .review-actions .button { width: 100%; text-align: center; }
 }
 
 @media (max-width: 400px) {
-  .content { padding: 16px 12px; }
-  .stat { padding: 16px; }
+  .content { padding: 14px 10px; }
+  .stat { padding: 14px; }
   .stat-value { font-size: 26px; }
-  h1 { font-size: 26px; }
-  h2 { font-size: 20px; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 18px; }
+  .panel { padding: 14px; }
+  .form input, .form textarea, .form select { padding: 10px; font-size: 16px; }
+}
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sidebar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .content { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
