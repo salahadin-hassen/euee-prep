@@ -5,7 +5,7 @@ import 'dart:convert';
 ///
 /// Value-level problems (empty strings, out-of-range integers, unknown enum
 /// values, broken references) are *not* parse errors; they are surfaced as
-/// [ContentImportIssue]s by the validator in `content_import_service.dart`.
+/// [ContentImportIssue]s by the validator in `content_pack_validator.dart`.
 class ContentPackFormatException implements Exception {
   const ContentPackFormatException(this.message);
 
@@ -15,40 +15,44 @@ class ContentPackFormatException implements Exception {
   String toString() => 'ContentPackFormatException: $message';
 }
 
-/// Parsed top-level content pack file (contract: `docs/content-pack-spec.md`).
+/// Parsed content-pack file for the v3 flat schema.
 ///
-/// DTOs in this file mirror the pack file format only — they are distinct from
-/// the domain models in this folder (`chapter.dart`, `question.dart`, ...)
-/// which represent persisted rows. `toCanonicalJson()` produces the
-/// deterministic serialization that the pack checksum is computed over.
+/// One paper = one content pack. The conceptual hierarchy is:
+///   Stream → Subject → Paper (year) → Questions
+///
+/// DTOs mirror the pack file format only — they are distinct from the
+/// domain models which represent persisted rows. `toCanonicalJson()`
+/// produces the deterministic serialization that the checksum is computed over.
 class ContentPackFile {
   const ContentPackFile({
-    required this.packVersion,
     required this.schemaVersion,
+    required this.packId,
+    required this.packVersion,
     required this.generatedAt,
     required this.checksum,
     required this.minimumAppVersion,
     required this.stream,
     required this.subject,
-    required this.chapters,
-    required this.exams,
+    required this.paper,
+    required this.questions,
   });
 
-  final String packVersion;
   final String schemaVersion;
+  final String packId;
+  final String packVersion;
   final String generatedAt;
   final String checksum;
   final String minimumAppVersion;
   final String stream;
   final SubjectDescriptor subject;
-  final List<ChapterFile> chapters;
-  final List<ExamFile> exams;
+  final PaperDescriptor paper;
+  final List<QuestionFile> questions;
 
-  /// Version-independent pack identity: `{stream_slug}-{subject_slug}`.
+  /// Version-independent pack identity: `{stream}-{subject_slug}`.
   String get packKey => '$stream-${subject.slug}';
 
-  /// Version-specific row identity: `{pack_key}#{pack_version}`.
-  String get id => '$packKey#$packVersion';
+  /// Version-specific row identity: `{pack_id}#{pack_version}`.
+  String get id => '$packId#$packVersion';
 
   factory ContentPackFile.parse(String rawJson) {
     final Object? decoded;
@@ -65,18 +69,17 @@ class ContentPackFile {
 
   factory ContentPackFile.fromJson(Map<String, dynamic> json) {
     return ContentPackFile(
-      packVersion: _string(json, 'pack_version'),
       schemaVersion: _string(json, 'schema_version'),
+      packId: _string(json, 'pack_id'),
+      packVersion: _string(json, 'pack_version'),
       generatedAt: _string(json, 'generated_at'),
       checksum: _string(json, 'checksum'),
       minimumAppVersion: _string(json, 'minimum_app_version'),
       stream: _string(json, 'stream'),
       subject: SubjectDescriptor.fromJson(_map(json, 'subject')),
-      chapters: _list(json, 'chapters')
-          .map((e) => ChapterFile.fromJson(_asMap(e, 'chapters[]')))
-          .toList(),
-      exams: _list(json, 'exams')
-          .map((e) => ExamFile.fromJson(_asMap(e, 'exams[]')))
+      paper: PaperDescriptor.fromJson(_map(json, 'paper')),
+      questions: _list(json, 'questions')
+          .map((e) => QuestionFile.fromJson(_asMap(e, 'questions[]')))
           .toList(),
     );
   }
@@ -85,14 +88,15 @@ class ContentPackFile {
   /// `checksum` field is deliberately excluded — a pack cannot checksum itself.
   String toCanonicalJson() {
     return jsonEncode({
-      'pack_version': packVersion,
-      'schema_version': schemaVersion,
       'generated_at': generatedAt,
       'minimum_app_version': minimumAppVersion,
+      'pack_id': packId,
+      'pack_version': packVersion,
+      'paper': paper.toJson(),
+      'questions': questions.map((q) => q.toJson()).toList(),
+      'schema_version': schemaVersion,
       'stream': stream,
       'subject': subject.toJson(),
-      'chapters': chapters.map((c) => c.toJson()).toList(),
-      'exams': exams.map((e) => e.toJson()).toList(),
     });
   }
 }
@@ -113,207 +117,71 @@ class SubjectDescriptor {
   Map<String, dynamic> toJson() => {'slug': slug, 'title': title};
 }
 
-class ChapterFile {
-  const ChapterFile({
-    required this.id,
-    required this.grade,
+class PaperDescriptor {
+  const PaperDescriptor({
+    required this.year,
     required this.title,
-    required this.orderIndex,
-    required this.topics,
+    required this.questionCount,
   });
 
-  final String id;
-  final int grade;
+  final int year;
   final String title;
-  final int orderIndex;
-  final List<TopicFile> topics;
+  final int questionCount;
 
-  factory ChapterFile.fromJson(Map<String, dynamic> json) {
-    return ChapterFile(
-      id: _string(json, 'id'),
-      grade: _int(json, 'grade'),
+  factory PaperDescriptor.fromJson(Map<String, dynamic> json) {
+    return PaperDescriptor(
+      year: _int(json, 'year'),
       title: _string(json, 'title'),
-      orderIndex: _int(json, 'order_index'),
-      topics: _list(json, 'topics')
-          .map((e) => TopicFile.fromJson(_asMap(e, 'topics[]')))
-          .toList(),
+      questionCount: _int(json, 'question_count'),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'grade': grade,
+        'year': year,
         'title': title,
-        'order_index': orderIndex,
-        'topics': topics.map((t) => t.toJson()).toList(),
-      };
-}
-
-class TopicFile {
-  const TopicFile({
-    required this.id,
-    required this.title,
-    required this.orderIndex,
-    required this.questions,
-    required this.resources,
-  });
-
-  final String id;
-  final String title;
-  final int orderIndex;
-  final List<QuestionFile> questions;
-  final List<ResourceFile> resources;
-
-  factory TopicFile.fromJson(Map<String, dynamic> json) {
-    return TopicFile(
-      id: _string(json, 'id'),
-      title: _string(json, 'title'),
-      orderIndex: _int(json, 'order_index'),
-      questions: _list(json, 'questions')
-          .map((e) => QuestionFile.fromJson(_asMap(e, 'questions[]')))
-          .toList(),
-      resources: _list(json, 'resources')
-          .map((e) => ResourceFile.fromJson(_asMap(e, 'resources[]')))
-          .toList(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'order_index': orderIndex,
-        'questions': questions.map((q) => q.toJson()).toList(),
-        'resources': resources.map((r) => r.toJson()).toList(),
+        'question_count': questionCount,
       };
 }
 
 class QuestionFile {
   const QuestionFile({
     required this.id,
+    required this.number,
     required this.prompt,
     required this.choices,
     required this.correctChoiceIndex,
-    required this.topicRefs,
     this.explanation,
-    this.textbookReference,
-    this.examYearEc,
-    this.imageReference,
-    this.graphReference,
-    this.diagramReference,
-    this.tableReference,
+    this.sourcePage,
   });
 
   final String id;
+  final int number;
   final String prompt;
   final List<String> choices;
   final int correctChoiceIndex;
-  final List<String> topicRefs;
   final String? explanation;
-  final String? textbookReference;
-  final int? examYearEc;
-  final String? imageReference;
-  final String? graphReference;
-  final String? diagramReference;
-  final String? tableReference;
+  final int? sourcePage;
 
   factory QuestionFile.fromJson(Map<String, dynamic> json) {
     return QuestionFile(
       id: _string(json, 'id'),
+      number: _int(json, 'number'),
       prompt: _string(json, 'prompt'),
       choices: _stringList(json, 'choices'),
       correctChoiceIndex: _int(json, 'correct_choice_index'),
-      topicRefs: _stringList(json, 'topic_refs'),
       explanation: _nullableString(json, 'explanation'),
-      textbookReference: _nullableString(json, 'textbook_reference'),
-      examYearEc: _nullableInt(json, 'exam_year_ec'),
-      imageReference: _nullableString(json, 'image_reference'),
-      graphReference: _nullableString(json, 'graph_reference'),
-      diagramReference: _nullableString(json, 'diagram_reference'),
-      tableReference: _nullableString(json, 'table_reference'),
+      sourcePage: _nullableInt(json, 'source_page'),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'number': number,
         'prompt': prompt,
         'choices': choices,
         'correct_choice_index': correctChoiceIndex,
         if (explanation != null) 'explanation': explanation,
-        if (textbookReference != null) 'textbook_reference': textbookReference,
-        if (examYearEc != null) 'exam_year_ec': examYearEc,
-        'topic_refs': topicRefs,
-        if (imageReference != null) 'image_reference': imageReference,
-        if (graphReference != null) 'graph_reference': graphReference,
-        if (diagramReference != null) 'diagram_reference': diagramReference,
-        if (tableReference != null) 'table_reference': tableReference,
-      };
-}
-
-class ResourceFile {
-  const ResourceFile({
-    required this.id,
-    required this.type,
-    required this.content,
-    required this.orderIndex,
-    this.title,
-  });
-
-  final String id;
-  final String type;
-  final String? title;
-  final String content;
-  final int orderIndex;
-
-  factory ResourceFile.fromJson(Map<String, dynamic> json) {
-    return ResourceFile(
-      id: _string(json, 'id'),
-      type: _string(json, 'type'),
-      title: _nullableString(json, 'title'),
-      content: _string(json, 'content'),
-      orderIndex: _int(json, 'order_index'),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type,
-        if (title != null) 'title': title,
-        'content': content,
-        'order_index': orderIndex,
-      };
-}
-
-class ExamFile {
-  const ExamFile({
-    required this.id,
-    required this.yearEc,
-    required this.questionIds,
-    this.title,
-    this.durationSeconds,
-  });
-
-  final String id;
-  final int yearEc;
-  final String? title;
-  final int? durationSeconds;
-  final List<String> questionIds;
-
-  factory ExamFile.fromJson(Map<String, dynamic> json) {
-    return ExamFile(
-      id: _string(json, 'id'),
-      yearEc: _int(json, 'year_ec'),
-      title: _nullableString(json, 'title'),
-      durationSeconds: _nullableInt(json, 'duration_seconds'),
-      questionIds: _stringList(json, 'question_ids'),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'year_ec': yearEc,
-        if (title != null) 'title': title,
-        if (durationSeconds != null) 'duration_seconds': durationSeconds,
-        'question_ids': questionIds,
+        if (sourcePage != null) 'source_page': sourcePage,
       };
 }
 

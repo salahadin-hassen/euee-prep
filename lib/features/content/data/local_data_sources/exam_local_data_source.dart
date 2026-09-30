@@ -73,4 +73,47 @@ class ExamLocalDataSource {
         )
         .toList();
   }
+
+  Future<List<ExamPersistenceModel>> getBySubjectId(int subjectId) async {
+    final exams = await (_database.select(_database.exams)
+          ..where((e) => e.subjectId.equals(subjectId))
+          ..orderBy([(e) => OrderingTerm(expression: e.examYearEc)]))
+        .get();
+    final links = await (_database.select(_database.examQuestions)
+          ..orderBy([
+            (link) => OrderingTerm(expression: link.orderIndex),
+          ]))
+        .get();
+    final questionIdsByExam = <int, List<int>>{};
+    for (final link in links) {
+      questionIdsByExam
+          .putIfAbsent(link.examId, () => <int>[])
+          .add(link.questionId);
+    }
+
+    return exams
+        .map(
+          (exam) => ExamPersistenceModel(
+            id: exam.id,
+            sourcePackId: exam.sourcePackId,
+            packLocalId: exam.packLocalId,
+            subjectId: exam.subjectId,
+            examYearEc: exam.examYearEc,
+            questionIds: questionIdsByExam[exam.id] ?? const <int>[],
+            title: exam.title,
+            durationSeconds: exam.durationSeconds,
+          ),
+        )
+        .toList();
+  }
+
+  Future<List<int>> getQuestionIdsByExamId(int examId) async {
+    final links = await (_database.select(_database.examQuestions)
+          ..where((eq) => eq.examId.equals(examId))
+          ..orderBy([
+            (link) => OrderingTerm(expression: link.orderIndex),
+          ]))
+        .get();
+    return links.map((l) => l.questionId).toList();
+  }
 }

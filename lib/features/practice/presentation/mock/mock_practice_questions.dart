@@ -2,10 +2,6 @@
 //
 // Stands in for the real repository/provider until Riverpod/Drift are
 // wired up.
-//
-// TODO(integration): delete once a real provider supplies
-// QuestionUiModel instances from the Question repository, scoped to
-// this chapter's Topics via the many-to-many join (Decision 011).
 
 import '../models/practice_models.dart';
 
@@ -15,6 +11,7 @@ class MockPracticeQuestions {
   static List<QuestionUiModel> forChapter(String chapterId) {
     return const [
       QuestionUiModel(
+        dbQuestionId: 1,
         questionId: 'q1',
         topicIds: ['work-energy-theorem'],
         prompt: 'A ball is thrown upward with initial velocity 20 m/s. '
@@ -26,6 +23,7 @@ class MockPracticeQuestions {
         textbookReference: 'Grade 10 Physics, Ch. 4, p. 87',
       ),
       QuestionUiModel(
+        dbQuestionId: 2,
         questionId: 'q2',
         topicIds: ['kinetic-energy', 'work-energy-theorem'],
         prompt: 'A 2 kg object moves at 3 m/s. What is its kinetic energy?',
@@ -36,6 +34,7 @@ class MockPracticeQuestions {
         textbookReference: 'Grade 10 Physics, Ch. 4, p. 91',
       ),
       QuestionUiModel(
+        dbQuestionId: 3,
         questionId: 'q3',
         topicIds: ['power'],
         prompt: 'What is the SI unit of Power?',
@@ -45,6 +44,7 @@ class MockPracticeQuestions {
         textbookReference: null,
       ),
       QuestionUiModel(
+        dbQuestionId: 4,
         questionId: 'q4',
         topicIds: ['kinetic-energy'],
         prompt: 'Doubling an object\'s velocity (mass constant) multiplies '
@@ -56,6 +56,7 @@ class MockPracticeQuestions {
         textbookReference: 'Grade 10 Physics, Ch. 4, p. 90',
       ),
       QuestionUiModel(
+        dbQuestionId: 5,
         questionId: 'q5',
         topicIds: ['work-energy-theorem'],
         prompt: 'A force of 10 N moves an object 5 m in the direction of '
@@ -66,6 +67,7 @@ class MockPracticeQuestions {
         textbookReference: 'Grade 10 Physics, Ch. 4, p. 85',
       ),
       QuestionUiModel(
+        dbQuestionId: 6,
         questionId: 'q6',
         topicIds: ['power'],
         prompt: 'A machine does 300 J of work in 5 seconds. What is its '

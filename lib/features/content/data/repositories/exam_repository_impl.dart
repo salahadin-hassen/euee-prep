@@ -20,6 +20,17 @@ class ExamRepositoryImpl implements ExamRepository {
     return models.map(_toDomain).toList();
   }
 
+  @override
+  Future<List<Exam>> getBySubjectId(int subjectId) async {
+    final models = await _localDataSource.getBySubjectId(subjectId);
+    return models.map(_toDomain).toList();
+  }
+
+  @override
+  Future<List<int>> getQuestionIdsByExamId(int examId) {
+    return _localDataSource.getQuestionIdsByExamId(examId);
+  }
+
   ExamPersistenceModel _toPersistence(Exam exam) {
     return ExamPersistenceModel(
       id: exam.id,

@@ -1,0 +1,43 @@
+{
+  "schema_version": "3",
+  "pack_id": "biology-2018-natural-science",
+  "pack_version": "1.0.0",
+  "generated_at": "2026-09-16T12:00:00.000Z",
+  "minimum_app_version": "1.0.0",
+  "checksum": "fnv1a64:ac3bdec5993382e7",
+  "stream": "natural_science",
+  "subject": {
+    "slug": "biology",
+    "title": "Biology"
+  },
+  "paper": {
+    "year": 2018,
+    "title": "2018 Natural Science — Biology",
+    "question_count": 2
+  },
+  "questions": [
+    {
+      "id": "biology-2018-natural-science-q1",
+      "number": 1,
+      "prompt": "Which organelle is responsible for ATP synthesis?",
+      "choices": ["Ribosome", "Golgi apparatus", "Mitochondrion", "Lysosome"],
+      "correct_choice_index": 2,
+      "explanation": "Mitochondria produce ATP via oxidative phosphorylation.",
+      "source_page": 3
+    },
+    {
+      "id": "biology-2018-natural-science-q2",
+      "number": 2,
+      "prompt": "What is the primary function of the Golgi apparatus?",
+      "choices": [
+        "Protein synthesis",
+        "Lipid synthesis",
+        "Protein modification and sorting",
+        "DNA replication"
+      ],
+      "correct_choice_index": 2,
+      "explanation": "The Golgi apparatus modifies, sorts, and packages proteins.",
+      "source_page": 5
+    }
+  ]
+}

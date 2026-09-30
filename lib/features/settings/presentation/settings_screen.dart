@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
+import '../../content/presentation/import_screen.dart';
 import '../../streams/domain/models/stream_model.dart';
 import '../../entitlements/presentation/payment_submission_flow.dart';
 
@@ -41,6 +42,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const _PreferredStreamSection(),
             const Divider(height: 1, color: AppColors.colorBorder),
             const _OtherStreamsSection(),
+            const Divider(height: 1, color: AppColors.colorBorder),
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined,
+                  color: AppColors.colorTextSecondary),
+              title: const Text('Import Content Pack',
+                  style: AppTypography.typeBody),
+              subtitle: const Text('Add exam papers from a file',
+                  style: AppTypography.typeCaption),
+              trailing: const Icon(Icons.chevron_right,
+                  color: AppColors.colorTextSecondary),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ImportScreen(),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.spaceXl),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.spaceMd),

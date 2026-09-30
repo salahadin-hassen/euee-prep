@@ -1,24 +1,16 @@
 import 'dart:convert';
 
-import '../../../grades/domain/models/grade.dart';
-import '../../../grades/domain/repositories/grade_repository.dart';
-import '../../../streams/domain/models/stream_model.dart';
 import '../../../streams/domain/repositories/stream_repository.dart';
-import '../../../subjects/domain/models/subject.dart';
 import '../../../subjects/domain/repositories/subject_repository.dart';
-import '../models/chapter.dart';
+import '../../../subjects/domain/models/subject.dart';
+import '../../../streams/domain/models/stream_model.dart';
 import '../models/content_pack.dart';
 import '../models/content_pack_file.dart';
 import '../models/exam.dart';
 import '../models/question.dart';
-import '../models/resource.dart';
-import '../models/topic.dart';
-import '../repositories/chapter_repository.dart';
 import '../repositories/content_pack_repository.dart';
 import '../repositories/exam_repository.dart';
 import '../repositories/question_repository.dart';
-import '../repositories/resource_repository.dart';
-import '../repositories/topic_repository.dart';
 import 'content_import_checksum.dart';
 import 'content_import_issue.dart';
 import 'content_import_transaction.dart';
@@ -73,50 +65,36 @@ class ContentPackImportException implements Exception {
 
 /// Coordinates content-pack ingestion: parse → validate → checksum →
 /// app-version gate → idempotency → atomic import through the existing
-/// repositories (Decision 021/026, Milestone 3 of the roadmap).
+/// repositories.
 ///
-/// Lives in `content/domain` because it is scoped entirely to the `content`
-/// feature (per `docs/coding-standards.md` Service placement rule). All row
-/// writes flow through repositories; the only Drift access is the injected
-/// [ContentImportTransaction], which provides the atomic boundary without the
-/// service executing any queries itself.
+/// For the v3 flat schema, the import pipeline is simplified:
+///   Stream → Subject → ContentPack → Exam → Questions → ExamQuestions
+///
+/// No chapters, topics, or resources are created.
 class ContentImportService {
   ContentImportService({
     required ContentPackRepository contentPackRepository,
-    required GradeRepository gradeRepository,
     required StreamRepository streamRepository,
     required SubjectRepository subjectRepository,
-    required ChapterRepository chapterRepository,
-    required TopicRepository topicRepository,
     required QuestionRepository questionRepository,
     required ExamRepository examRepository,
-    required ResourceRepository resourceRepository,
     required ContentImportTransaction transaction,
-    this.currentAppVersion = '0.1.0',
+    this.currentAppVersion = '1.0.0',
   })  : _contentPackRepository = contentPackRepository,
-        _gradeRepository = gradeRepository,
         _streamRepository = streamRepository,
         _subjectRepository = subjectRepository,
-        _chapterRepository = chapterRepository,
-        _topicRepository = topicRepository,
         _questionRepository = questionRepository,
         _examRepository = examRepository,
-        _resourceRepository = resourceRepository,
         _transaction = transaction;
 
   final ContentPackRepository _contentPackRepository;
-  final GradeRepository _gradeRepository;
   final StreamRepository _streamRepository;
   final SubjectRepository _subjectRepository;
-  final ChapterRepository _chapterRepository;
-  final TopicRepository _topicRepository;
   final QuestionRepository _questionRepository;
   final ExamRepository _examRepository;
-  final ResourceRepository _resourceRepository;
   final ContentImportTransaction _transaction;
 
-  /// The running app version, compared against `minimum_app_version`
-  /// (Decision 021). Defaults to the value in `pubspec.yaml`.
+  /// The running app version, compared against `minimum_app_version`.
   final String currentAppVersion;
 
   Future<ContentImportResult> import(String rawJson,
@@ -169,43 +147,20 @@ class ContentImportService {
     ContentPackFile pack,
     String importedAt,
   ) async {
-    var nextGradeId = _maxPlusOne(
-      (await _gradeRepository.getAll()).map((g) => g.id),
-    );
     var nextStreamId = _maxPlusOne(
       (await _streamRepository.getAll()).map((s) => s.id),
     );
     var nextSubjectId = _maxPlusOne(
       (await _subjectRepository.getAll()).map((s) => s.id),
     );
-    var nextChapterId = _maxPlusOne(
-      (await _chapterRepository.getAll()).map((c) => c.id),
-    );
-    var nextTopicId = _maxPlusOne(
-      (await _topicRepository.getAll()).map((t) => t.id),
-    );
     var nextQuestionId = _maxPlusOne(
       (await _questionRepository.getAll()).map((q) => q.id),
-    );
-    var nextResourceId = _maxPlusOne(
-      (await _resourceRepository.getAll()).map((r) => r.id),
     );
     var nextExamId = _maxPlusOne(
       (await _examRepository.getAll()).map((e) => e.id),
     );
 
-    final gradeIdByLevel = <int, int>{};
-    for (final level in pack.chapters.map((c) => c.grade).toSet()) {
-      final existing = await _gradeRepository.getByLevel(level);
-      if (existing != null) {
-        gradeIdByLevel[level] = existing.id;
-      } else {
-        final id = nextGradeId++;
-        await _gradeRepository.insert(Grade(id: id, level: level));
-        gradeIdByLevel[level] = id;
-      }
-    }
-
+    // Stream — find or create.
     final existingStream = await _streamRepository.getBySlug(pack.stream);
     final int streamId;
     if (existingStream != null) {
@@ -217,6 +172,7 @@ class ContentImportService {
       );
     }
 
+    // Subject — find or create. Reject title changes across pack versions.
     final existingSubject = await _subjectRepository.getByStreamAndSlug(
       streamId,
       pack.subject.slug,
@@ -228,7 +184,7 @@ class ContentImportService {
           ContentImportIssue(
             'subject "${pack.subject.slug}" title changed from '
             '"${existingSubject.title}" to "${pack.subject.title}" across '
-            'pack versions — content is immutable (Decision 015/021)',
+            'pack versions — content is immutable',
           ),
         );
       }
@@ -245,6 +201,7 @@ class ContentImportService {
       );
     }
 
+    // Content pack metadata.
     final contentPack = await _contentPackRepository.insert(
       ContentPack(
         id: pack.id,
@@ -259,116 +216,44 @@ class ContentImportService {
       ),
     );
 
-    final topicIdByPackLocal = <String, int>{};
+    // Questions — flat list, no topics.
     final questionIdByPackLocal = <String, int>{};
-
-    // Phase 1 — chapters and topics. All topics must exist before any
-    // question's topic_refs can be resolved.
-    for (final chapterFile in pack.chapters) {
-      final chapterId = nextChapterId++;
-      await _chapterRepository.insert(
-        Chapter(
-          id: chapterId,
-          subjectId: subjectId,
-          gradeId: gradeIdByLevel[chapterFile.grade]!,
+    for (final questionFile in pack.questions) {
+      final questionId = nextQuestionId++;
+      await _questionRepository.insert(
+        Question(
+          id: questionId,
           sourcePackId: contentPack.id,
-          packLocalId: chapterFile.id,
-          title: chapterFile.title,
-          orderIndex: chapterFile.orderIndex,
+          packLocalId: questionFile.id,
+          prompt: questionFile.prompt,
+          choicesJson: jsonEncode(questionFile.choices),
+          correctChoiceIndex: questionFile.correctChoiceIndex,
+          topicIds: const [],
+          explanation: questionFile.explanation,
         ),
       );
-      for (final topicFile in chapterFile.topics) {
-        final topicId = nextTopicId++;
-        await _topicRepository.insert(
-          Topic(
-            id: topicId,
-            chapterId: chapterId,
-            sourcePackId: contentPack.id,
-            packLocalId: topicFile.id,
-            title: topicFile.title,
-            orderIndex: topicFile.orderIndex,
-          ),
-        );
-        topicIdByPackLocal[topicFile.id] = topicId;
-      }
+      questionIdByPackLocal[questionFile.id] = questionId;
     }
 
-    // Phase 2 — resources and questions, now that every topic is known.
-    for (final chapterFile in pack.chapters) {
-      for (final topicFile in chapterFile.topics) {
-        final topicId = topicIdByPackLocal[topicFile.id]!;
-        for (final resourceFile in topicFile.resources) {
-          final resourceId = nextResourceId++;
-          await _resourceRepository.insert(
-            Resource(
-              id: resourceId,
-              topicId: topicId,
-              sourcePackId: contentPack.id,
-              packLocalId: resourceFile.id,
-              type: _resourceType(resourceFile.type),
-              title: resourceFile.title,
-              content: resourceFile.content,
-              orderIndex: resourceFile.orderIndex,
-            ),
-          );
-        }
-        for (final questionFile in topicFile.questions) {
-          final questionId = nextQuestionId++;
-          await _questionRepository.insert(
-            Question(
-              id: questionId,
-              sourcePackId: contentPack.id,
-              packLocalId: questionFile.id,
-              prompt: questionFile.prompt,
-              choicesJson: jsonEncode(questionFile.choices),
-              correctChoiceIndex: questionFile.correctChoiceIndex,
-              topicIds: questionFile.topicRefs
-                  .map((ref) => topicIdByPackLocal[ref]!)
-                  .toList(),
-              explanation: questionFile.explanation,
-              textbookReference: questionFile.textbookReference,
-              examYearEc: questionFile.examYearEc,
-              imageReference: questionFile.imageReference,
-              graphReference: questionFile.graphReference,
-              diagramReference: questionFile.diagramReference,
-              tableReference: questionFile.tableReference,
-            ),
-          );
-          questionIdByPackLocal[questionFile.id] = questionId;
-        }
-      }
-    }
-
-    // Phase 3 — exams (Decision 038: array order is the stored order).
-    for (final examFile in pack.exams) {
-      final examId = nextExamId++;
-      await _examRepository.insert(
-        Exam(
-          id: examId,
-          sourcePackId: contentPack.id,
-          packLocalId: examFile.id,
-          subjectId: subjectId,
-          examYearEc: examFile.yearEc,
-          questionIds: examFile.questionIds
-              .map((ref) => questionIdByPackLocal[ref]!)
-              .toList(),
-          title: examFile.title,
-          durationSeconds: examFile.durationSeconds,
-        ),
-      );
-    }
+    // Exam — one paper per pack.
+    final examId = nextExamId++;
+    final examQuestionIds = pack.questions
+        .map((q) => questionIdByPackLocal[q.id]!)
+        .toList();
+    await _examRepository.insert(
+      Exam(
+        id: examId,
+        sourcePackId: contentPack.id,
+        packLocalId: pack.packId,
+        subjectId: subjectId,
+        examYearEc: pack.paper.year,
+        questionIds: examQuestionIds,
+        title: pack.paper.title,
+      ),
+    );
 
     return contentPack;
   }
-}
-
-ResourceType _resourceType(String type) {
-  return switch (type) {
-    'note' => ResourceType.note,
-    'flashcard' => ResourceType.flashcard,
-    'mindmap' => ResourceType.mindmap,
-    _ => throw ArgumentError.value(type, 'type', 'unknown resource type'),
-  };
 }
 
 int _maxPlusOne(Iterable<int> ids) {

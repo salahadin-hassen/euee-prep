@@ -1,14 +1,7 @@
 // TEMPORARY MOCK DATA SOURCE.
 //
 // Stands in for the real repository/provider until Riverpod/Drift are
-// wired up. Represents a Natural Science Preferred Stream (Decision 009)
-// with a mix of locked and entitled subjects, exercising both card
-// states plus a partial-progress example.
-//
-// TODO(integration): delete once a real provider supplies
-// SubjectUiModel instances derived from the Subject + Entitlement +
-// Attempt repositories (scoped to the user's Preferred Stream per
-// Decision 029, entitlement-gated per Decision 012).
+// wired up.
 
 import '../models/subject_ui_model.dart';
 
@@ -22,14 +15,16 @@ class MockSubjects {
           subjectId: 'physics',
           name: 'Physics',
           iconGlyph: '🧪',
-          chapterCount: 24,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: false,
         ),
         SubjectUiModel(
           subjectId: 'mathematics',
           name: 'Mathematics',
           iconGlyph: '📐',
-          chapterCount: 31,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: true,
           progress: 0.62,
         ),
@@ -37,14 +32,16 @@ class MockSubjects {
           subjectId: 'biology',
           name: 'Biology',
           iconGlyph: '🧬',
-          chapterCount: 19,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: false,
         ),
         SubjectUiModel(
           subjectId: 'chemistry',
           name: 'Chemistry',
           iconGlyph: '⚗️',
-          chapterCount: 22,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: true,
           progress: 0.0,
         ),
@@ -52,7 +49,8 @@ class MockSubjects {
           subjectId: 'english',
           name: 'English',
           iconGlyph: '📖',
-          chapterCount: 16,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: true,
           progress: 0.31,
         ),
@@ -60,7 +58,8 @@ class MockSubjects {
           subjectId: 'sat_aptitude',
           name: 'SAT (Aptitude)',
           iconGlyph: '🧩',
-          chapterCount: 12,
+          paperCount: 0,
+          questionCount: 0,
           isEntitled: false,
         ),
       ];

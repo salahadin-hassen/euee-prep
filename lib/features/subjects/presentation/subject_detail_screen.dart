@@ -1,153 +1,349 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
-import 'mock/mock_chapters.dart';
-import 'models/chapter_ui_model.dart';
-import 'study_resources_screen.dart';
-import 'widgets/grade_section.dart';
-import 'widgets/subject_detail_header.dart';
+import '../../../core/providers.dart';
+import '../../content/domain/models/exam.dart';
+import '../../practice/presentation/models/practice_models.dart';
+import '../../practice/presentation/practice_screen.dart';
 
-/// Subject Detail screen (Decision 014): grade-grouped chapter list for
-/// one subject. Reached by tapping an entitled subject on Subject List.
+/// Decodes the `choices_json` column into the option list shown in practice.
 ///
-/// Presentation-layer only. Data currently comes from [MockChapters].
+/// The importer writes this column with `jsonEncode`, so it must be read back
+/// with the matching JSON parser: choices routinely contain commas, quotes and
+/// brackets (e.g. `"Option A, with a comma"`), which the previous
+/// `replaceAll`/`split(',')` parsing mangled into extra options.
 ///
-/// TODO(integration): Replace mock data with a real provider reading
-/// Chapter scoped to (subjectId, each Grade) via the Chapter repository
-/// (Decision 010), and per-chapter/overall completion from a
-/// Service-layer rollup over Attempt history (Decision 016 — never a
-/// stored value).
+/// Throws [FormatException] when the stored value is not a JSON array of
+/// strings — malformed content must fail loudly rather than render as
+/// silently corrupted options.
+List<String> decodeChoicesJson(String choicesJson) {
+  final Object? decoded;
+  try {
+    decoded = jsonDecode(choicesJson);
+  } on FormatException catch (e) {
+    throw FormatException('choices_json is not valid JSON: ${e.message}');
+  }
+  if (decoded is! List) {
+    throw const FormatException('choices_json must be a JSON array of strings');
+  }
+  return decoded.map((element) {
+    if (element is! String) {
+      throw const FormatException(
+        'choices_json must be a JSON array of strings',
+      );
+    }
+    return element;
+  }).toList();
+}
+
+
+/// Subject Detail screen — shows past papers for one subject.
 ///
-/// TODO(integration): "which grade section is expanded by default"
-/// currently always defaults to Grade 12 (see design review — a
-/// placeholder pending real "most recently studied grade" data, which
-/// doesn't exist yet in mock form).
-class SubjectDetailScreen extends StatefulWidget {
+/// Data is loaded from the real database via [examsBySubjectProvider].
+class SubjectDetailScreen extends ConsumerWidget {
   const SubjectDetailScreen({
     super.key,
     required this.subjectId,
     required this.subjectName,
-    required this.overallProgress,
   });
 
-  final String subjectId;
+  final int subjectId;
   final String subjectName;
-  final double overallProgress;
 
   @override
-  State<SubjectDetailScreen> createState() => _SubjectDetailScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final examsAsync = ref.watch(examsBySubjectProvider(subjectId));
 
-class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
-  bool _isLoading = true;
-  List<GradeSectionUiModel> _sections = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() {
-      _sections = MockChapters.forSubject(widget.subjectId);
-      _isLoading = false;
-    });
-  }
-
-  void _handleChapterTap(ChapterUiModel chapter, int grade) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => StudyResourcesScreen(
-          chapterId: chapter.chapterId,
-          chapterTitle: chapter.title,
-          grade: grade,
-          subjectName: widget.subjectName,
-        ),
-      ),
-    );
-  }
-
-  int get _totalChapterCount =>
-      _sections.fold(0, (sum, s) => sum + s.chapters.length);
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.colorBackground,
       appBar: AppBar(
         backgroundColor: AppColors.colorBackground,
         elevation: 0,
-        title: Text(widget.subjectName, style: AppTypography.typeHeading3),
+        title: Text(subjectName, style: AppTypography.typeHeading3),
       ),
       body: SafeArea(
-        child: _isLoading ? const _SubjectDetailSkeleton() : _buildBody(),
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    return ListView(
-      children: [
-        SubjectDetailHeader(
-          subjectName: widget.subjectName,
-          chapterCount: _totalChapterCount,
-          overallProgress: widget.overallProgress,
+        child: examsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (exams) {
+            if (exams.isEmpty) {
+              return const _NoPapers();
+            }
+            return _PaperList(exams: exams, subjectName: subjectName);
+          },
         ),
-        for (final section in _sections)
-          GradeSection(
-            section: section,
-            // Placeholder default per the design review: Grade 12
-            // expanded, others collapsed, until real "most recently
-            // studied" data exists.
-            initiallyExpanded: section.grade == 12,
-            onChapterTap: (chapter) =>
-                _handleChapterTap(chapter, section.grade),
-          ),
-        const SizedBox(height: AppSpacing.spaceLg),
-      ],
+      ),
     );
   }
 }
 
-/// Skeleton loading state — header skeleton + 4 collapsed-looking
-/// placeholder bars, consistent with the pattern used on the previous
-/// two screens.
-class _SubjectDetailSkeleton extends StatelessWidget {
-  const _SubjectDetailSkeleton();
+class _PaperList extends StatelessWidget {
+  const _PaperList({required this.exams, required this.subjectName});
+
+  final List<Exam> exams;
+  final String subjectName;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(AppSpacing.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _bar(width: 140, height: 24),
-          const SizedBox(height: AppSpacing.spaceSm),
-          _bar(width: 180, height: 12),
-          const SizedBox(height: AppSpacing.spaceMd),
-          _bar(width: double.infinity, height: 6),
-          const SizedBox(height: AppSpacing.spaceLg),
-          for (var i = 0; i < 4; i++) ...[
-            _bar(width: double.infinity, height: 48),
-            const SizedBox(height: AppSpacing.spaceSm),
-          ],
+      children: [
+        Text(
+          'Past papers',
+          style: AppTypography.typeCaption.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.spaceSm),
+        for (var i = 0; i < exams.length; i++) ...[
+          _PaperCard(
+            exam: exams[i],
+            subjectName: subjectName,
+            onTap: () => _showStartSheet(context, exams[i], subjectName),
+          ),
+          if (i < exams.length - 1)
+            const SizedBox(height: AppSpacing.spaceMd),
         ],
+      ],
+    );
+  }
+
+  void _showStartSheet(
+    BuildContext context,
+    Exam exam,
+    String subjectName,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.colorBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLg)),
+      ),
+      builder: (context) => _PaperStartSheet(
+        exam: exam,
+        subjectName: subjectName,
+        onStart: () {
+          Navigator.of(context).pop();
+          _openPractice(context, exam, subjectName);
+        },
       ),
     );
   }
 
-  Widget _bar({required double width, required double height}) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.colorDisabled.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(AppRadius.radiusSm),
+  void _openPractice(
+    BuildContext context,
+    Exam exam,
+    String subjectName,
+  ) async {
+    final questionRepo =
+        ProviderScope.containerOf(context).read(questionRepositoryProvider);
+    final questionIds = exam.questionIds;
+    if (questionIds.isEmpty) return;
+
+    final questions = await questionRepo.getByIds(questionIds);
+    if (!context.mounted) return;
+
+    final idToIndex = <int, int>{};
+    for (var i = 0; i < questionIds.length; i++) {
+      idToIndex[questionIds[i]] = i;
+    }
+    final sorted = List.of(questions)
+      ..sort((a, b) =>
+          (idToIndex[a.id] ?? 0).compareTo(idToIndex[b.id] ?? 0));
+
+    final uiModels = sorted.map((q) {
+      return QuestionUiModel(
+        dbQuestionId: q.id,
+        questionId: q.packLocalId,
+        topicIds: const [],
+        prompt: q.prompt,
+        options: decodeChoicesJson(q.choicesJson),
+        correctIndex: q.correctChoiceIndex,
+        explanation: q.explanation ?? '',
+        textbookReference: q.textbookReference,
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PracticeScreen(
+          mode: PracticeMode.practice,
+          questions: uiModels,
+          chapterId: exam.packLocalId,
+          chapterTitle: '$subjectName ${exam.examYearEc}',
+          examId: exam.id,
+          subjectId: exam.subjectId,
+        ),
+      ),
+    );
+  }
+}
+
+/// Minimal bottom sheet shown before starting practice.
+class _PaperStartSheet extends StatelessWidget {
+  const _PaperStartSheet({
+    required this.exam,
+    required this.subjectName,
+    required this.onStart,
+  });
+
+  final Exam exam;
+  final String subjectName;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final year = exam.examYearEc;
+    final questionCount = exam.questionIds.length;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.colorBorder,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusFull),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.spaceLg),
+            Text('$subjectName $year', style: AppTypography.typeHeading2),
+            const SizedBox(height: AppSpacing.spaceXs),
+            Text(
+              '$questionCount questions',
+              style: AppTypography.typeBody
+                  .copyWith(color: AppColors.colorTextSecondary),
+            ),
+            const SizedBox(height: AppSpacing.spaceLg),
+            AppButton(
+              label: 'Start Practice',
+              isFullWidth: true,
+              onPressed: onStart,
+            ),
+            const SizedBox(height: AppSpacing.spaceSm),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaperCard extends StatelessWidget {
+  const _PaperCard({
+    required this.exam,
+    required this.subjectName,
+    required this.onTap,
+  });
+
+  final Exam exam;
+  final String subjectName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final questionCount = exam.questionIds.length;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.spaceMd),
+        decoration: BoxDecoration(
+          color: AppColors.colorSurface,
+          borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+          border: Border.all(color: AppColors.colorBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.colorPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.radiusSm),
+              ),
+              child: Center(
+                child: Text(
+                  '${exam.examYearEc}',
+                  style: AppTypography.typeHeading3.copyWith(
+                    color: AppColors.colorPrimary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$subjectName ${exam.examYearEc}',
+                    style: AppTypography.typeBody
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: AppSpacing.spaceXs),
+                  Text(
+                    '$questionCount questions',
+                    style: AppTypography.typeCaption,
+                  ),
+                ],
+              ),
+            ),
+            AppButton(
+              label: 'Open',
+              variant: AppButtonVariant.secondary,
+              onPressed: onTap,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoPapers extends StatelessWidget {
+  const _NoPapers();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.description_outlined,
+              size: AppIconSize.iconSizeXl,
+              color: AppColors.colorTextSecondary,
+            ),
+            SizedBox(height: AppSpacing.spaceMd),
+            Text(
+              'No papers available',
+              style: AppTypography.typeHeading3,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppSpacing.spaceSm),
+            Text(
+              'Import a content pack for this subject.',
+              style: AppTypography.typeCaption,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,15 +1,9 @@
 // Local UI models — presentation layer only.
 //
-// Not domain models. The real Question/Topic entities (many-to-many,
-// Decision 011) and Attempt persistence (append-only, Decision 016) are
-// owned by the data/domain/service layers. QuestionAttemptState below
-// is transient presentation state for one on-screen session — it is
-// NOT the Attempt record itself.
-//
-// TODO(integration): replace mock construction with a mapper from the
-// domain Question model (incl. its many-to-many Topic tags) and wire
-// _each submitted answer_ to a real Attempt-repository write via the
-// Service layer. Widgets should not need to change.
+// Not domain models. QuestionUiModel is built from the real Question
+// entity via a mapper in SubjectDetailScreen. QuestionAttemptState is
+// transient presentation state for one on-screen session — it is NOT
+// the Attempt record itself.
 
 /// Three interaction experiences over one underlying practice engine.
 /// See the Practice/Exam UX spec (v3) for full reasoning per mode.
@@ -17,6 +11,7 @@ enum PracticeMode { learn, practice, exam }
 
 class QuestionUiModel {
   const QuestionUiModel({
+    required this.dbQuestionId,
     required this.questionId,
     required this.topicIds,
     required this.prompt,
@@ -26,6 +21,10 @@ class QuestionUiModel {
     this.textbookReference,
   });
 
+  /// SQLite primary key — used for attempt persistence.
+  final int dbQuestionId;
+
+  /// Stable content-pack identity (e.g. "biology-2018-natural-science-q1").
   final String questionId;
 
   /// Decision 011: a question may tag multiple topics. Wrong answers
@@ -45,7 +44,7 @@ class QuestionUiModel {
 
 /// Transient, session-scoped state for one question during a single
 /// PracticeScreen session. Not persisted beyond the session except via
-/// the (mocked) Attempt write on submit.
+/// the Attempt repository write on submit.
 class QuestionAttemptState {
   QuestionAttemptState();
 
@@ -59,8 +58,7 @@ class QuestionAttemptState {
   bool isSubmitted = false;
 
   /// Exam Mode only. Session-scoped — cleared automatically on submit,
-  /// never persisted as domain data. Deliberately distinct from
-  /// Bookmark (see mock/bookmark store) which persists across sessions.
+  /// never persisted as domain data.
   bool isFlagged = false;
 
   bool get isAnswered => selectedIndex != null;

@@ -18,25 +18,12 @@ class QuestionCard extends StatelessWidget {
     required this.attemptState,
     required this.showFeedback,
     required this.onSelectOption,
-    required this.notesAvailable,
-    required this.flashcardsAvailable,
-    required this.mindMapAvailable,
-    required this.onViewNotes,
-    required this.onViewFlashcards,
-    required this.onViewMindMap,
   });
 
   final QuestionUiModel question;
   final QuestionAttemptState attemptState;
   final bool showFeedback;
   final ValueChanged<int> onSelectOption;
-
-  final bool notesAvailable;
-  final bool flashcardsAvailable;
-  final bool mindMapAvailable;
-  final VoidCallback onViewNotes;
-  final VoidCallback onViewFlashcards;
-  final VoidCallback onViewMindMap;
 
   static const _optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -84,12 +71,11 @@ class QuestionCard extends StatelessWidget {
               isCorrect: attemptState.selectedIndex == question.correctIndex,
               explanation: question.explanation,
               textbookReference: question.textbookReference,
-              notesAvailable: notesAvailable,
-              flashcardsAvailable: flashcardsAvailable,
-              mindMapAvailable: mindMapAvailable,
-              onViewNotes: onViewNotes,
-              onViewFlashcards: onViewFlashcards,
-              onViewMindMap: onViewMindMap,
+              yourAnswerLabel: attemptState.selectedIndex != null
+                  ? '${_optionLabels[attemptState.selectedIndex!]}. ${question.options[attemptState.selectedIndex!]}'
+                  : '',
+              correctAnswerLabel:
+                  '${_optionLabels[question.correctIndex]}. ${question.options[question.correctIndex]}',
             ),
         ],
       ),

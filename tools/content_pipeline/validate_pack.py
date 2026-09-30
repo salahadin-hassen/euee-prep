@@ -4,22 +4,29 @@ Usage::
 
     python validate_pack.py <pack-file> [<pack-file> ...]
 
-Validates a content pack against the contract in ``docs/content-pack-spec.md``
-and the schema in ``docs/database-schema.md`` *before* the pack ships — the
-pipeline's last line of defense so bad content never reaches a device
-(Decision 021; ``docs/coding-standards.md`` Python section: fail loudly and
-specifically, naming the exact field that is invalid).
+Validates a content pack against the shared v3 content-pack contract before it
+ships — the pipeline's last line of defense so bad content never reaches a
+device (Decision 021; ``docs/coding-standards.md`` Python section: fail loudly
+and specifically, naming the exact field that is invalid).
+
+The contract is defined by the Flutter importer, which is the authority:
+
+* ``lib/features/content/domain/models/content_pack_file.dart`` (shape)
+* ``lib/features/content/domain/services/content_pack_validator.dart`` (rules)
+
+and is produced by the Content Studio exporter
+(``content-studio/lib/export-pack.ts``). This module must not accept anything
+the app would reject, nor reject anything the app accepts.
 
 Validation covers:
 
-* Required metadata and versioning fields (``pack_version``,
+* Required metadata and versioning fields (``pack_id``, ``pack_version``,
   ``schema_version``, ``generated_at``, ``checksum``, ``minimum_app_version``)
-* Supported ``schema_version``
-* Stream / grade / resource-type enum values
-* Required stable pack-local IDs and their pack-wide uniqueness
-* Broken topic references, broken exam question references, and duplicate
-  question/exam membership
-* One paper per (subject, EC year) per pack (Decision 038)
+* Supported ``schema_version`` (``"3"``) and rejection of stale v2 fields
+* Stream enum values and the flat Stream → Subject → Paper → Questions shape
+* ``paper`` metadata, including ``question_count`` agreement with the question
+  list
+* Question fields: ids, numbers, prompts, choices, ``correct_choice_index``
 * Checksum integrity (see ``pack_checksum.py``)
 
 Exit status is ``0`` when every pack validates, ``1`` otherwise.
@@ -36,10 +43,34 @@ from typing import Any, Dict, List
 
 from pack_checksum import compute_checksum
 
-SUPPORTED_SCHEMA_VERSION = "2"
+SUPPORTED_SCHEMA_VERSION = "3"
 VALID_STREAMS = {"natural_science", "social_science"}
-VALID_GRADES = {9, 10, 11, 12}
-VALID_RESOURCE_TYPES = {"note", "flashcard", "mindmap"}
+
+# Exact field set of the v3 content pack. Anything else is a stale (v2) or
+# invented field and must be rejected instead of silently ignored.
+TOP_LEVEL_FIELDS = {
+    "schema_version",
+    "pack_id",
+    "pack_version",
+    "generated_at",
+    "checksum",
+    "minimum_app_version",
+    "stream",
+    "subject",
+    "paper",
+    "questions",
+}
+SUBJECT_FIELDS = {"slug", "title"}
+PAPER_FIELDS = {"year", "title", "question_count"}
+QUESTION_FIELDS = {
+    "id",
+    "number",
+    "prompt",
+    "choices",
+    "correct_choice_index",
+    "explanation",
+    "source_page",
+}
 
 
 def validate(pack: Any) -> List[str]:
@@ -53,39 +84,8 @@ def validate(pack: Any) -> List[str]:
 
     errors: List[str] = []
     _validate_metadata(pack, errors)
-
-    chapters = pack.get("chapters")
-    exams = pack.get("exams")
-    if not isinstance(chapters, list):
-        errors.append('"chapters" must be an array')
-        chapters = []
-    if not isinstance(exams, list):
-        errors.append('"exams" must be an array')
-        exams = []
-
-    all_ids: set = set()
-    topic_ids: set = set()
-    question_ids: set = set()
-    exam_years: List[Any] = []
-
-    for index, chapter in enumerate(chapters):
-        _validate_chapter(chapter, index, all_ids, topic_ids, question_ids, errors)
-
-    for index, exam in enumerate(exams):
-        _validate_exam(exam, index, all_ids, exam_years, errors)
-
-    # Decision 038 — one paper per (subject, EC year) per pack.
-    seen_years: set = set()
-    for year in exam_years:
-        if isinstance(year, int) and year in seen_years:
-            errors.append(
-                "duplicate exam for subject and year_ec %s — one paper per "
-                "(subject, year) per pack (Decision 038)" % year
-            )
-        seen_years.add(year)
-
-    _validate_references(chapters, exams, topic_ids, question_ids, errors)
-
+    _validate_paper(pack, errors)
+    _validate_questions(pack, errors)
     return errors
 
 
@@ -110,8 +110,10 @@ def validate_integrity(pack: Any) -> List[str]:
 
 
 def _validate_metadata(pack: Dict[str, Any], errors: List[str]) -> None:
+    _reject_unknown_fields(pack, TOP_LEVEL_FIELDS, "", errors)
+
     schema_version = pack.get("schema_version")
-    if not isinstance(schema_version, str) or not schema_version:
+    if not _is_nonempty_string(schema_version):
         errors.append('"schema_version" must be a non-empty string')
     elif schema_version != SUPPORTED_SCHEMA_VERSION:
         errors.append(
@@ -129,11 +131,14 @@ def _validate_metadata(pack: Dict[str, Any], errors: List[str]) -> None:
     if not isinstance(subject, dict):
         errors.append('"subject" must be an object')
     else:
+        _reject_unknown_fields(subject, SUBJECT_FIELDS, "subject.", errors)
         if not _is_nonempty_string(subject.get("slug")):
             errors.append("subject.slug must be a non-empty string")
         if not _is_nonempty_string(subject.get("title")):
             errors.append("subject.title must be a non-empty string")
 
+    if not _is_nonempty_string(pack.get("pack_id")):
+        errors.append('"pack_id" must be a non-empty string')
     if not _is_nonempty_string(pack.get("pack_version")):
         errors.append('"pack_version" must be a non-empty string')
 
@@ -148,258 +153,122 @@ def _validate_metadata(pack: Dict[str, Any], errors: List[str]) -> None:
         errors.append('"minimum_app_version" must be a non-empty string')
 
 
-def _validate_chapter(
-    chapter: Any,
-    chapter_index: int,
-    all_ids: set,
-    topic_ids: set,
-    question_ids: set,
-    errors: List[str],
-) -> None:
-    where = "chapters[%s]" % chapter_index
-    if not isinstance(chapter, dict):
-        errors.append("%s must be an object" % where)
+def _validate_paper(pack: Dict[str, Any], errors: List[str]) -> None:
+    paper = pack.get("paper")
+    if not isinstance(paper, dict):
+        errors.append('"paper" must be an object')
         return
+    _reject_unknown_fields(paper, PAPER_FIELDS, "paper.", errors)
 
-    _check_id(chapter.get("id"), "chapter", all_ids, errors)
+    year = paper.get("year")
+    if not _is_int(year) or year <= 0:
+        errors.append("paper.year must be > 0, got %r" % (year,))
 
-    grade = chapter.get("grade")
-    if not isinstance(grade, int) or grade not in VALID_GRADES:
+    if not _is_nonempty_string(paper.get("title")):
+        errors.append("paper.title must be a non-empty string")
+
+    question_count = paper.get("question_count")
+    if not _is_int(question_count):
+        errors.append('"paper.question_count" must be an integer')
+        return
+    questions = pack.get("questions")
+    if isinstance(questions, list) and question_count != len(questions):
         errors.append(
-            '%s has invalid grade %r; expected 9, 10, 11, or 12' % (where, grade)
-        )
-
-    if not _is_nonempty_string(chapter.get("title")):
-        errors.append("%s title must be a non-empty string" % where)
-
-    order_index = chapter.get("order_index")
-    if not isinstance(order_index, int) or order_index < 0:
-        errors.append("%s order_index must be an integer >= 0" % where)
-
-    topics = chapter.get("topics")
-    if not isinstance(topics, list):
-        errors.append("%s.topics must be an array" % where)
-        return
-    for topic_index, topic in enumerate(topics):
-        _validate_topic(
-            topic,
-            "%s.topics[%s]" % (where, topic_index),
-            all_ids,
-            topic_ids,
-            question_ids,
-            errors,
+            "paper.question_count (%s) does not match actual question count (%s)"
+            % (question_count, len(questions))
         )
 
 
-def _validate_topic(
-    topic: Any,
-    where: str,
-    all_ids: set,
-    topic_ids: set,
-    question_ids: set,
-    errors: List[str],
-) -> None:
-    if not isinstance(topic, dict):
-        errors.append("%s must be an object" % where)
-        return
-
-    _check_id(topic.get("id"), "topic", all_ids, errors)
-    topic_id = topic.get("id")
-    if isinstance(topic_id, str):
-        topic_ids.add(topic_id)
-
-    if not _is_nonempty_string(topic.get("title")):
-        errors.append("%s title must be a non-empty string" % where)
-
-    order_index = topic.get("order_index")
-    if not isinstance(order_index, int) or order_index < 0:
-        errors.append("%s order_index must be an integer >= 0" % where)
-
-    questions = topic.get("questions")
+def _validate_questions(pack: Dict[str, Any], errors: List[str]) -> None:
+    questions = pack.get("questions")
     if not isinstance(questions, list):
-        errors.append("%s.questions must be an array" % where)
-        questions = []
-    resources = topic.get("resources")
-    if not isinstance(resources, list):
-        errors.append("%s.resources must be an array" % where)
-        resources = []
-
-    for q_index, question in enumerate(questions):
-        _validate_question(
-            question, "%s.questions[%s]" % (where, q_index), all_ids, question_ids, errors
-        )
-    for r_index, resource in enumerate(resources):
-        _validate_resource(resource, "%s.resources[%s]" % (where, r_index), all_ids, errors)
-
-
-def _validate_question(
-    question: Any, where: str, all_ids: set, question_ids: set, errors: List[str]
-) -> None:
-    if not isinstance(question, dict):
-        errors.append("%s must be an object" % where)
+        errors.append('"questions" must be an array')
         return
 
-    _check_id(question.get("id"), "question", all_ids, errors)
-    question_id = question.get("id")
-    if isinstance(question_id, str):
-        question_ids.add(question_id)
+    seen_ids: set = set()
+    for index, question in enumerate(questions):
+        where = "questions[%s]" % index
+        if not isinstance(question, dict):
+            errors.append("%s must be an object" % where)
+            continue
+        _reject_unknown_fields(question, QUESTION_FIELDS, "", errors, where)
 
-    if not _is_nonempty_string(question.get("prompt")):
-        errors.append("%s prompt must be a non-empty string" % where)
+        question_id = question.get("id")
+        if not _is_nonempty_string(question_id):
+            errors.append("question has an empty id")
+        elif question_id in seen_ids:
+            errors.append('duplicate question id "%s"' % question_id)
+        else:
+            seen_ids.add(question_id)
+        label = question_id if _is_nonempty_string(question_id) else where
 
-    choices = question.get("choices")
-    if not isinstance(choices, list) or len(choices) < 2:
-        errors.append("%s must have at least two choices" % where)
-        choices = []
-    else:
-        for c_index, choice in enumerate(choices):
-            if not _is_nonempty_string(choice):
-                errors.append("%s.choices[%s] must be a non-empty string" % (where, c_index))
+        number = question.get("number")
+        if not _is_int(number) or number <= 0:
+            errors.append('question "%s" number must be > 0' % label)
 
-    correct = question.get("correct_choice_index")
-    if not isinstance(correct, int):
-        errors.append("%s correct_choice_index must be an integer" % where)
-    elif correct < 0 or (choices and correct >= len(choices)):
-        errors.append(
-            "%s correct_choice_index %s is out of range for %s choices"
-            % (where, correct, len(choices))
-        )
+        prompt = question.get("prompt")
+        if not _is_nonempty_string(prompt):
+            errors.append('question "%s" prompt must be non-empty' % label)
 
-    for nullable in ("explanation", "textbook_reference", "image_reference",
-                     "graph_reference", "diagram_reference", "table_reference"):
-        value = question.get(nullable)
-        if value is not None and not isinstance(value, str):
-            errors.append('%s "%s" must be a string or null' % (where, nullable))
+        choices = question.get("choices")
+        if not isinstance(choices, list):
+            errors.append('question "%s" choices must be an array of strings' % label)
+            choices = []
+        elif not all(isinstance(choice, str) for choice in choices):
+            errors.append('question "%s" choices must be an array of strings' % label)
+            choices = [c for c in choices if isinstance(c, str)]
+        if len(choices) < 2:
+            errors.append('question "%s" must have at least two choices' % label)
+        for choice in choices:
+            if not choice:
+                errors.append('question "%s" contains an empty choice' % label)
 
-    exam_year_ec = question.get("exam_year_ec")
-    if exam_year_ec is not None and not isinstance(exam_year_ec, int):
-        errors.append('%s "exam_year_ec" must be an integer or null' % where)
+        correct = question.get("correct_choice_index")
+        if not _is_int(correct):
+            errors.append('question "%s" correct_choice_index must be an integer' % label)
+        elif correct < 0 or correct >= len(choices):
+            errors.append(
+                'question "%s" correct_choice_index %s is out of range for %s choices'
+                % (label, correct, len(choices))
+            )
 
-    topic_refs = question.get("topic_refs")
-    if not isinstance(topic_refs, list):
-        errors.append("%s topic_refs must be an array" % where)
-    else:
-        for r_index, ref in enumerate(topic_refs):
-            if not isinstance(ref, str) or not ref:
-                errors.append("%s.topic_refs[%s] must be a non-empty string" % (where, r_index))
-        nonempty_refs = [r for r in topic_refs if isinstance(r, str) and r]
-        if not nonempty_refs:
-            errors.append("%s must reference at least one topic" % where)
-        if len(set(topic_refs)) != len(topic_refs):
-            errors.append("%s lists a topic more than once" % where)
+        explanation = question.get("explanation")
+        if explanation is not None and not isinstance(explanation, str):
+            errors.append(
+                'question "%s" explanation must be a string or null' % label
+            )
 
-
-def _validate_resource(
-    resource: Any, where: str, all_ids: set, errors: List[str]
-) -> None:
-    if not isinstance(resource, dict):
-        errors.append("%s must be an object" % where)
-        return
-
-    _check_id(resource.get("id"), "resource", all_ids, errors)
-
-    resource_type = resource.get("type")
-    if resource_type not in VALID_RESOURCE_TYPES:
-        errors.append(
-            '%s has invalid type %r; expected note, flashcard, or mindmap '
-            "(Decision 037)" % (where, resource_type)
-        )
-
-    title = resource.get("title")
-    if title is not None and not isinstance(title, str):
-        errors.append('%s "title" must be a string or null' % where)
-
-    if not _is_nonempty_string(resource.get("content")):
-        errors.append("%s content must be a non-empty string" % where)
-
-    order_index = resource.get("order_index")
-    if not isinstance(order_index, int) or order_index < 0:
-        errors.append("%s order_index must be an integer >= 0" % where)
+        source_page = question.get("source_page")
+        if source_page is not None and not _is_int(source_page):
+            errors.append(
+                'question "%s" source_page must be an integer or null' % label
+            )
 
 
-def _validate_exam(
-    exam: Any, exam_index: int, all_ids: set, exam_years: List[Any], errors: List[str]
-) -> None:
-    where = "exams[%s]" % exam_index
-    if not isinstance(exam, dict):
-        errors.append("%s must be an object" % where)
-        return
-
-    _check_id(exam.get("id"), "exam", all_ids, errors)
-
-    year_ec = exam.get("year_ec")
-    if not isinstance(year_ec, int) or year_ec <= 0:
-        errors.append("%s has invalid year_ec %r" % (where, year_ec))
-    exam_years.append(year_ec)
-
-    title = exam.get("title")
-    if title is not None and not isinstance(title, str):
-        errors.append('%s "title" must be a string or null' % where)
-
-    duration = exam.get("duration_seconds")
-    if duration is not None and (not isinstance(duration, int) or duration <= 0):
-        errors.append("%s duration_seconds must be an integer > 0 when provided" % where)
-
-    question_ids = exam.get("question_ids")
-    if not isinstance(question_ids, list):
-        errors.append("%s question_ids must be an array" % where)
-    else:
-        for q_index, ref in enumerate(question_ids):
-            if not isinstance(ref, str) or not ref:
-                errors.append("%s.question_ids[%s] must be a non-empty string" % (where, q_index))
-        if len(set(question_ids)) != len(question_ids):
-            errors.append("%s lists a question more than once" % where)
-
-
-def _validate_references(
-    chapters: List[Any],
-    exams: List[Any],
-    topic_ids: set,
-    question_ids: set,
+def _reject_unknown_fields(
+    obj: Dict[str, Any],
+    allowed: set,
+    prefix: str,
     errors: List[str],
+    where: str = "",
 ) -> None:
-    for chapter in chapters:
-        if not isinstance(chapter, dict):
-            continue
-        for topic in chapter.get("topics") or []:
-            if not isinstance(topic, dict):
-                continue
-            for question in topic.get("questions") or []:
-                if not isinstance(question, dict):
-                    continue
-                for ref in question.get("topic_refs") or []:
-                    if isinstance(ref, str) and ref and ref not in topic_ids:
-                        errors.append(
-                            'question "%s" references unknown topic "%s"'
-                            % (question.get("id"), ref)
-                        )
-    for exam in exams:
-        if not isinstance(exam, dict):
-            continue
-        for ref in exam.get("question_ids") or []:
-            if isinstance(ref, str) and ref and ref not in question_ids:
-                errors.append(
-                    'exam "%s" references unknown question "%s"'
-                    % (exam.get("id"), ref)
-                )
-
-
-def _check_id(value: Any, kind: str, all_ids: set, errors: List[str]) -> None:
-    if not isinstance(value, str) or not value:
-        errors.append("%s has an empty or missing id" % kind)
-    elif value in all_ids:
-        errors.append('duplicate pack-local id "%s"' % value)
-    else:
-        all_ids.add(value)
+    for key in sorted(set(obj) - allowed):
+        location = "%s.%s" % (where, key) if where else "%s%s" % (prefix, key)
+        errors.append(
+            'unexpected field "%s" — the v3 content pack does not define it'
+            % location
+        )
 
 
 def _is_nonempty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
-def _is_iso8601(value: Any) -> bool:
-    if not isinstance(value, str):
-        return False
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_iso8601(value: str) -> bool:
     try:
         datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:

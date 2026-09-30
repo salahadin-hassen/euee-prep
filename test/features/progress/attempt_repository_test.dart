@@ -394,6 +394,60 @@ void main() {
       expect(methods, isNot(contains('update')));
       expect(methods, isNot(contains('delete')));
     });
+
+    test('different questions save different IDs and retrieve correctly',
+        () async {
+      // Regression: each attempt must be stored against the real question
+      // DB primary key, not a placeholder.
+      await repository.insert(
+        _attempt(questionId: 1, selectedChoiceIndex: 0, isCorrect: false),
+      );
+      await repository.insert(
+        _attempt(id: 2, questionId: 2, selectedChoiceIndex: 1, isCorrect: true),
+      );
+
+      final q1 = await repository.getByQuestionId(1);
+      final q2 = await repository.getByQuestionId(2);
+
+      expect(q1, hasLength(1));
+      expect(q1.single.questionId, 1);
+      expect(q1.single.isCorrect, isFalse);
+
+      expect(q2, hasLength(1));
+      expect(q2.single.questionId, 2);
+      expect(q2.single.isCorrect, isTrue);
+
+      // Verify no cross-contamination: question 1 never gets question 2's data
+      expect(q1.every((a) => a.questionId == 1), isTrue);
+      expect(q2.every((a) => a.questionId == 2), isTrue);
+    });
+
+    test('attempt retrieval works across multiple questions', () async {
+      // Insert attempts for 3 different questions
+      await repository.insert(
+        _attempt(questionId: 1, selectedChoiceIndex: 0),
+      );
+      await repository.insert(
+        _attempt(id: 2, questionId: 2, selectedChoiceIndex: 1),
+      );
+      await repository.insert(
+        _attempt(id: 3, questionId: 1, selectedChoiceIndex: 2),
+      );
+      await repository.insert(
+        _attempt(id: 4, questionId: 2, selectedChoiceIndex: 0, isCorrect: false),
+      );
+
+      final all = await repository.getAll();
+      expect(all, hasLength(4));
+
+      final q1Attempts = await repository.getByQuestionId(1);
+      final q2Attempts = await repository.getByQuestionId(2);
+      final q3Attempts = await repository.getByQuestionId(999);
+
+      expect(q1Attempts, hasLength(2));
+      expect(q2Attempts, hasLength(2));
+      expect(q3Attempts, isEmpty);
+    });
   });
 }
 

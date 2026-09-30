@@ -1,0 +1,75 @@
+{
+  "schema_version": "3",
+  "pack_id": "biology-2018-natural_science",
+  "pack_version": "1.0.0",
+  "generated_at": "2026-09-16T12:00:00.000Z",
+  "minimum_app_version": "1.0.0",
+  "stream": "natural_science",
+  "subject": {
+    "slug": "biology",
+    "title": "Biology"
+  },
+  "paper": {
+    "year": 2018,
+    "title": "2018 Natural Science — Biology",
+    "question_count": 4
+  },
+  "questions": [
+    {
+      "id": "biology-2018-natural_science-q1",
+      "number": 1,
+      "prompt": "Which organelle is responsible for ATP synthesis?",
+      "choices": [
+        "Ribosome",
+        "Golgi apparatus",
+        "Mitochondrion",
+        "Lysosome"
+      ],
+      "correct_choice_index": 2,
+      "explanation": "Mitochondria produce ATP via oxidative phosphorylation.",
+      "source_page": 3
+    },
+    {
+      "id": "biology-2018-natural_science-q2",
+      "number": 2,
+      "prompt": "Which statement about \"facilitated diffusion\" is correct?",
+      "choices": [
+        "It needs a concentration gradient, and carrier proteins",
+        "It requires ATP directly",
+        "It moves solutes against a gradient",
+        "It occurs only in plant cells"
+      ],
+      "correct_choice_index": 0,
+      "explanation": "Facilitated diffusion is passive: gradient + carrier.",
+      "source_page": 4
+    },
+    {
+      "id": "biology-2018-natural_science-q3",
+      "number": 3,
+      "prompt": "Approximately how many cells ≈ fit in 1 mm² of tissue?",
+      "choices": [
+        "10²",
+        "10⁴",
+        "10⁶",
+        "10⁸"
+      ],
+      "correct_choice_index": 1,
+      "explanation": "A typical animal cell is ≈ 10–20 µm across."
+    },
+    {
+      "id": "biology-2018-natural_science-q4",
+      "number": 4,
+      "prompt": "Which molecule stores genetic information?",
+      "choices": [
+        "DNA",
+        "Glucose",
+        "ATP",
+        "Keratin"
+      ],
+      "correct_choice_index": 0,
+      "explanation": "DNA stores the hereditary information of an organism.",
+      "source_page": 6
+    }
+  ],
+  "checksum": "fnv1a64:4dd754f5499085c4"
+}

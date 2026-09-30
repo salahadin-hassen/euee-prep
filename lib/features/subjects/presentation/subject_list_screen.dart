@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
+import '../../content/domain/repositories/exam_repository.dart';
+import '../../content/presentation/import_screen.dart';
 import '../../entitlements/presentation/payment_submission_flow.dart';
 import '../../streams/presentation/onboarding_screen.dart';
 import '../../subjects/domain/models/subject.dart';
@@ -96,7 +98,7 @@ class _StreamSubjectsView extends ConsumerWidget {
                 return const _EmptySubjects();
               }
               final isEntitled = entitlementAsync.valueOrNull != null;
-              return _SubjectList(
+              return _SubjectListWithCounts(
                 subjects: subjects,
                 isEntitled: isEntitled,
                 onSubjectTap: (subject) => _handleSubjectTap(
@@ -125,9 +127,8 @@ class _StreamSubjectsView extends ConsumerWidget {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => SubjectDetailScreen(
-            subjectId: subject.slug,
+            subjectId: subject.id,
             subjectName: subject.title,
-            overallProgress: 0.0,
           ),
         ),
       );
@@ -153,16 +154,80 @@ class _StreamSubjectsView extends ConsumerWidget {
   }
 }
 
-/// Maps a domain [Subject] to its presentation [SubjectUiModel].
-SubjectUiModel _toUiModel(Subject subject, {required bool isEntitled}) {
-  return SubjectUiModel(
-    subjectId: subject.slug,
-    name: subject.title,
-    iconGlyph: _iconForSlug(subject.slug),
-    chapterCount: 0, // TODO(integration): query chapter count
-    isEntitled: isEntitled,
-    progress: null,
-  );
+/// Loads exam counts per subject, then renders the list.
+class _SubjectListWithCounts extends ConsumerWidget {
+  const _SubjectListWithCounts({
+    required this.subjects,
+    required this.isEntitled,
+    required this.onSubjectTap,
+  });
+
+  final List<Subject> subjects;
+  final bool isEntitled;
+  final ValueChanged<Subject> onSubjectTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final examRepo = ref.watch(examRepositoryProvider);
+
+    return FutureBuilder<Map<int, _SubjectStats>>(
+      future: _loadStats(examRepo, subjects),
+      builder: (context, snapshot) {
+        final stats = snapshot.data ?? {};
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.spaceMd,
+            0,
+            AppSpacing.spaceMd,
+            AppSpacing.spaceMd,
+          ),
+          itemCount: subjects.length,
+          separatorBuilder: (_, __) =>
+              const SizedBox(height: AppSpacing.spaceMd),
+          itemBuilder: (context, index) {
+            final subject = subjects[index];
+            final s = stats[subject.id];
+            return SubjectCard(
+              subject: SubjectUiModel(
+                subjectId: subject.slug,
+                name: subject.title,
+                iconGlyph: _iconForSlug(subject.slug),
+                paperCount: s?.paperCount ?? 0,
+                questionCount: s?.questionCount ?? 0,
+                isEntitled: isEntitled,
+              ),
+              onTap: () => onSubjectTap(subject),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<Map<int, _SubjectStats>> _loadStats(
+    ExamRepository repo,
+    List<Subject> subjects,
+  ) async {
+    final result = <int, _SubjectStats>{};
+    for (final subject in subjects) {
+      final exams = await repo.getBySubjectId(subject.id);
+      var totalQuestions = 0;
+      for (final exam in exams) {
+        totalQuestions += exam.questionIds.length;
+      }
+      result[subject.id] = _SubjectStats(
+        paperCount: exams.length,
+        questionCount: totalQuestions,
+      );
+    }
+    return result;
+  }
+}
+
+class _SubjectStats {
+  const _SubjectStats({required this.paperCount, required this.questionCount});
+  final int paperCount;
+  final int questionCount;
 }
 
 String _iconForSlug(String slug) {
@@ -187,40 +252,6 @@ String _iconForSlug(String slug) {
       return '\u{1F4B0}';
     default:
       return '\u{1F4DA}';
-  }
-}
-
-/// Renders the subject list with [SubjectCard] items.
-class _SubjectList extends StatelessWidget {
-  const _SubjectList({
-    required this.subjects,
-    required this.isEntitled,
-    required this.onSubjectTap,
-  });
-
-  final List<Subject> subjects;
-  final bool isEntitled;
-  final ValueChanged<Subject> onSubjectTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.spaceMd,
-        0,
-        AppSpacing.spaceMd,
-        AppSpacing.spaceMd,
-      ),
-      itemCount: subjects.length,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.spaceMd),
-      itemBuilder: (context, index) {
-        final subject = subjects[index];
-        return SubjectCard(
-          subject: _toUiModel(subject, isEntitled: isEntitled),
-          onTap: () => onSubjectTap(subject),
-        );
-      },
-    );
   }
 }
 
@@ -350,28 +381,40 @@ class _EmptySubjects extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSpacing.spaceLg),
+        padding: const EdgeInsets.all(AppSpacing.spaceLg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.library_books_outlined,
               size: AppIconSize.iconSizeXl,
               color: AppColors.colorTextSecondary,
             ),
-            SizedBox(height: AppSpacing.spaceMd),
-            Text(
+            const SizedBox(height: AppSpacing.spaceMd),
+            const Text(
               'No subjects available',
               style: AppTypography.typeHeading3,
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppSpacing.spaceSm),
-            Text(
+            const SizedBox(height: AppSpacing.spaceSm),
+            const Text(
               'Import a content pack to see subjects here.',
               style: AppTypography.typeCaption,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.spaceLg),
+            AppButton(
+              label: 'Import Content Pack',
+              isFullWidth: true,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ImportScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),

@@ -6,12 +6,8 @@ import '../models/subject_ui_model.dart';
 
 /// One subject row on the Subject List (Home) screen.
 ///
-/// Same layout for both states — locked shows a small lock icon (not a
-/// full overlay, so the card still reads as inviting rather than a
-/// paywall), entitled shows an optional progress bar instead. This
-/// keeps the visual language of "this is a subject" consistent
-/// regardless of purchase state, per Decision 029's intent that locked
-/// browsing should feel native, not walled off.
+/// Shows the subject name, real paper/question counts, and an optional
+/// progress bar for entitled subjects. No fake stats or marketing copy.
 class SubjectCard extends StatelessWidget {
   const SubjectCard({
     super.key,
@@ -36,6 +32,10 @@ class SubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final paperLabel = subject.paperCount == 1 ? 'paper' : 'papers';
+    final questionLabel =
+        subject.questionCount == 1 ? 'question' : 'questions';
+
     return Semantics(
       label: _semanticLabel,
       button: true,
@@ -61,7 +61,7 @@ class SubjectCard extends StatelessWidget {
                     Text(subject.name, style: AppTypography.typeHeading3),
                     const SizedBox(height: AppSpacing.spaceXs),
                     Text(
-                      'Grade 9–12 · ${subject.chapterCount} chapters',
+                      '${subject.paperCount} $paperLabel \u2022 ${subject.questionCount} $questionLabel',
                       style: AppTypography.typeCaption,
                     ),
                     if (subject.isEntitled &&

@@ -87,4 +87,27 @@ class QuestionLocalDataSource {
       tableReference: row.tableReference,
     );
   }
+
+  Future<List<QuestionPersistenceModel>> getByIds(List<int> ids) async {
+    if (ids.isEmpty) return const [];
+    final rows = await (_database.select(_database.questions)
+          ..where((q) => q.id.isIn(ids)))
+        .get();
+    final links = await _database.select(_database.questionTopics).get();
+    final topicIdsByQuestion = <int, List<int>>{};
+    for (final link in links) {
+      topicIdsByQuestion
+          .putIfAbsent(link.questionId, () => <int>[])
+          .add(link.topicId);
+    }
+
+    return rows
+        .map(
+          (row) => _mapRow(
+            row,
+            topicIdsByQuestion[row.id] ?? const <int>[],
+          ),
+        )
+        .toList();
+  }
 }

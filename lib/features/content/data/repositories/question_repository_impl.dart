@@ -20,6 +20,12 @@ class QuestionRepositoryImpl implements QuestionRepository {
     return models.map(_toDomain).toList();
   }
 
+  @override
+  Future<List<Question>> getByIds(List<int> ids) async {
+    final models = await _localDataSource.getByIds(ids);
+    return models.map(_toDomain).toList();
+  }
+
   QuestionPersistenceModel _toPersistence(Question question) {
     return QuestionPersistenceModel(
       id: question.id,

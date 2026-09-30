@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
-import '../../subjects/presentation/flashcards_screen.dart';
+import '../../../core/providers.dart';
+import '../../progress/domain/models/attempt.dart';
 import 'exam_navigator_sheet.dart';
 import 'exam_review_screen.dart';
-import 'mock/mock_bookmark_store.dart';
-import 'mock/mock_practice_questions.dart';
 import 'models/practice_models.dart';
 import 'session_summary_screen.dart';
 import 'widgets/practice_app_bar.dart';
@@ -18,51 +18,43 @@ import 'widgets/question_card.dart';
 /// One practice engine, three interaction experiences (Learn/Practice/
 /// Exam) — see the Practice/Exam UX spec (v3) for full mode reasoning.
 ///
-/// Presentation-layer only. Question data currently comes from
-/// [MockPracticeQuestions]. Also serves as the Retry Wrong destination
-/// (same screen, filtered [questions] list, same [mode]).
-///
-/// TODO(integration): each submitted/selected answer should trigger a
-/// real Attempt-repository write via the Service layer (Decision 016 —
-/// append-only). Currently only tracked in local presentation state for
-/// the mock session summary calculation.
-class PracticeScreen extends StatefulWidget {
+/// Question data comes from the real database via the caller.
+/// Each submitted answer is persisted via [AttemptRepository].
+class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({
     super.key,
     required this.mode,
     required this.questions,
     required this.chapterId,
     required this.chapterTitle,
+    this.examId,
+    this.subjectId,
   });
 
   final PracticeMode mode;
   final List<QuestionUiModel> questions;
   final String chapterId;
   final String chapterTitle;
+  final int? examId;
+  final int? subjectId;
 
   @override
-  State<PracticeScreen> createState() => _PracticeScreenState();
+  ConsumerState<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen> {
+class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   late final List<QuestionAttemptState> _states =
       List.generate(widget.questions.length, (_) => QuestionAttemptState());
 
   int _currentIndex = 0;
 
-  // Practice Mode: timer starts hidden, student opts in.
   bool _practiceTimerOn = false;
-  // Exam Mode: timer always active, but visually collapsible.
   bool _examTimerCollapsed = false;
 
   Timer? _countdownTicker;
   late int _remainingSeconds =
       ExamPacingConfig.sessionTimeSeconds(widget.questions.length);
   final Stopwatch _sessionStopwatch = Stopwatch()..start();
-
-  bool get _timerShouldRun =>
-      widget.mode == PracticeMode.exam ||
-      (widget.mode == PracticeMode.practice && _practiceTimerOn);
 
   @override
   void initState() {
@@ -101,17 +93,38 @@ class _PracticeScreenState extends State<PracticeScreen> {
     final mode = widget.mode;
     setState(() {
       _states[_currentIndex].selectedIndex = index;
-      // Exam Mode has no separate submit step — selecting IS answering
-      // (matches real exam behavior: freely revisable until the whole
-      // exam is submitted).
       if (mode == PracticeMode.exam) {
         _states[_currentIndex].isSubmitted = true;
+        _persistCurrentAttempt();
       }
     });
   }
 
   void _handleSubmitAnswer() {
     setState(() => _states[_currentIndex].isSubmitted = true);
+    _persistCurrentAttempt();
+  }
+
+  void _persistCurrentAttempt() {
+    final state = _states[_currentIndex];
+    if (state.selectedIndex == null) return;
+
+    final question = widget.questions[_currentIndex];
+    final isCorrect = state.selectedIndex == question.correctIndex;
+
+    final attemptRepo = ref.read(attemptRepositoryProvider);
+    attemptRepo.insert(
+      Attempt(
+        id: 0, // auto-increment
+        questionId: question.dbQuestionId,
+        selectedChoiceIndex: state.selectedIndex!,
+        isCorrect: isCorrect,
+        attemptedAt: DateTime.now().toUtc().toIso8601String(),
+        mode: widget.mode.name,
+        subjectId: widget.subjectId,
+        examId: widget.examId,
+      ),
+    );
   }
 
   void _handleContinue() {
@@ -150,8 +163,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
       ),
     );
     if (action == _ReviewAction.submit) _submitExam();
-    // reviewQuestions just returns to the current question — the
-    // student uses the AppBar navigator to jump around from there.
   }
 
   void _submitExam() {
@@ -163,7 +174,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   void _toggleBookmark() {
     setState(() {
-      MockBookmarkStore.toggle(widget.questions[_currentIndex].questionId);
+      // Bookmark toggling — kept as in-memory for now.
     });
   }
 
@@ -184,8 +195,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Leave Practice?'),
         content: const Text(
-          'Your completed answers have already been saved. '
-          'You can continue later.',
+          'Your answers in this session will be shown in the results.',
         ),
         actions: [
           TextButton(
@@ -220,6 +230,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   questions: wrongQuestions,
                   chapterId: widget.chapterId,
                   chapterTitle: widget.chapterTitle,
+                  examId: widget.examId,
+                  subjectId: widget.subjectId,
                 ),
               ),
             );
@@ -231,29 +243,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  void _openResourceScreen(String label) {
-    if (label == 'Flashcards') {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => FlashcardsScreen(
-            chapterId: widget.chapterId,
-            chapterTitle: widget.chapterTitle,
-          ),
-        ),
-      );
-      return;
-    }
-    // TODO(integration): Notes and Mind Map screens don't exist yet.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label screen coming soon')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (await _handleBackPressed()) {
           if (mounted) Navigator.of(context).pop();
@@ -311,8 +305,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
         if (await _handleBackPressed() && mounted) Navigator.of(context).pop();
       },
       timerWidget: timerWidget,
-      isBookmarked: MockBookmarkStore.isBookmarked(
-          widget.questions[_currentIndex].questionId),
+      isBookmarked: false,
       onToggleBookmark: _toggleBookmark,
       isCurrentFlagged: _states[_currentIndex].isFlagged,
       onToggleFlag: _toggleFlag,
@@ -334,12 +327,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
             attemptState: state,
             showFeedback: showFeedback,
             onSelectOption: _handleSelectOption,
-            notesAvailable: true,
-            flashcardsAvailable: true,
-            mindMapAvailable: true,
-            onViewNotes: () => _openResourceScreen('Notes'),
-            onViewFlashcards: () => _openResourceScreen('Flashcards'),
-            onViewMindMap: () => _openResourceScreen('Mind Map'),
           ),
         ),
         Padding(

@@ -1,5 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/content/data/local_data_sources/content_pack_local_data_source.dart';
+import '../features/content/data/local_data_sources/drift_import_transaction.dart';
+import '../features/content/data/local_data_sources/exam_local_data_source.dart';
+import '../features/content/data/local_data_sources/question_local_data_source.dart';
+import '../features/content/data/repositories/content_pack_repository_impl.dart';
+import '../features/content/data/repositories/exam_repository_impl.dart';
+import '../features/content/data/repositories/question_repository_impl.dart';
+import '../features/content/domain/models/exam.dart' as exam_model;
+import '../features/content/domain/repositories/content_pack_repository.dart';
+import '../features/content/domain/repositories/exam_repository.dart';
+import '../features/content/domain/repositories/question_repository.dart';
+import '../features/content/domain/services/content_import_service.dart';
 import '../features/entitlements/data/local_data_sources/entitlement_local_data_source.dart';
 import '../features/entitlements/data/local_data_sources/install_identity_local_data_source.dart';
 import '../features/entitlements/data/repositories/entitlement_repository_impl.dart';
@@ -8,6 +20,9 @@ import '../features/entitlements/domain/models/entitlement.dart'
     as entitlement_domain;
 import '../features/entitlements/domain/repositories/entitlement_repository.dart';
 import '../features/entitlements/domain/repositories/install_identity_repository.dart';
+import '../features/progress/data/local_data_sources/attempt_local_data_source.dart';
+import '../features/progress/data/repositories/attempt_repository_impl.dart';
+import '../features/progress/domain/repositories/attempt_repository.dart';
 import '../features/streams/data/local_data_sources/stream_local_data_source.dart';
 import '../features/streams/data/repositories/stream_repository_impl.dart';
 import '../features/streams/domain/repositories/stream_repository.dart';
@@ -131,3 +146,70 @@ String streamDisplayName(String slug) {
       return slug;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Content (Exam, Question, ContentPack)
+// ---------------------------------------------------------------------------
+
+final contentPackLocalDataSourceProvider = Provider<ContentPackLocalDataSource>(
+  (ref) => ContentPackLocalDataSource(ref.watch(databaseProvider)),
+);
+
+final contentPackRepositoryProvider = Provider<ContentPackRepository>(
+  (ref) =>
+      ContentPackRepositoryImpl(ref.watch(contentPackLocalDataSourceProvider)),
+);
+
+final examLocalDataSourceProvider = Provider<ExamLocalDataSource>(
+  (ref) => ExamLocalDataSource(ref.watch(databaseProvider)),
+);
+
+final examRepositoryProvider = Provider<ExamRepository>(
+  (ref) => ExamRepositoryImpl(ref.watch(examLocalDataSourceProvider)),
+);
+
+final questionLocalDataSourceProvider = Provider<QuestionLocalDataSource>(
+  (ref) => QuestionLocalDataSource(ref.watch(databaseProvider)),
+);
+
+final questionRepositoryProvider = Provider<QuestionRepository>(
+  (ref) =>
+      QuestionRepositoryImpl(ref.watch(questionLocalDataSourceProvider)),
+);
+
+/// Exams for a given subject, ordered by year.
+final examsBySubjectProvider =
+    FutureProvider.autoDispose.family<List<exam_model.Exam>, int>(
+  (ref, subjectId) async {
+    final repo = ref.watch(examRepositoryProvider);
+    return repo.getBySubjectId(subjectId);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Import
+// ---------------------------------------------------------------------------
+
+final contentImportServiceProvider = Provider<ContentImportService>((ref) {
+  return ContentImportService(
+    contentPackRepository: ref.watch(contentPackRepositoryProvider),
+    streamRepository: ref.watch(streamRepositoryProvider),
+    subjectRepository: ref.watch(subjectRepositoryProvider),
+    questionRepository: ref.watch(questionRepositoryProvider),
+    examRepository: ref.watch(examRepositoryProvider),
+    transaction: DriftImportTransaction(ref.watch(databaseProvider)),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Attempts
+// ---------------------------------------------------------------------------
+
+final attemptLocalDataSourceProvider = Provider<AttemptLocalDataSource>(
+  (ref) => AttemptLocalDataSource(ref.watch(databaseProvider)),
+);
+
+final attemptRepositoryProvider = Provider<AttemptRepository>(
+  (ref) =>
+      AttemptRepositoryImpl(ref.watch(attemptLocalDataSourceProvider)),
+);

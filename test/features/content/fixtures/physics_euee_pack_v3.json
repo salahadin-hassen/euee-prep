@@ -1,0 +1,45 @@
+{
+  "schema_version": "3",
+  "pack_id": "physics-2015-natural-science",
+  "pack_version": "1.0.0",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "checksum": "fnv1a64:25e101149fba2264",
+  "minimum_app_version": "1.0.0",
+  "stream": "natural_science",
+  "subject": {
+    "slug": "physics",
+    "title": "Physics"
+  },
+  "paper": {
+    "year": 2015,
+    "title": "EUEE Physics 2015",
+    "question_count": 3
+  },
+  "questions": [
+    {
+      "id": "physics-2015-natural-science-q1",
+      "number": 1,
+      "prompt": "A 5 kg mass accelerates at 2 m/s². What is the net force acting on it?",
+      "choices": ["5 N", "10 N", "15 N", "20 N"],
+      "correct_choice_index": 1,
+      "explanation": "F = ma = 5 kg × 2 m/s² = 10 N",
+      "source_page": 3
+    },
+    {
+      "id": "physics-2015-natural-science-q2",
+      "number": 2,
+      "prompt": "A 2 kg ball is dropped from a height of 5 m. Using energy conservation, what is its speed just before hitting the ground?",
+      "choices": ["5 m/s", "10 m/s", "20 m/s", "50 m/s"],
+      "correct_choice_index": 1,
+      "explanation": "mgh = ½mv², so v = √(2gh) = √(2 × 10 × 5) = 10 m/s"
+    },
+    {
+      "id": "physics-2015-natural-science-q3",
+      "number": 3,
+      "prompt": "In an isolated system, which quantities are conserved?",
+      "choices": ["Momentum only", "Energy only", "Both energy and momentum", "Neither"],
+      "correct_choice_index": 2,
+      "explanation": "In an isolated system, both energy and momentum are conserved."
+    }
+  ]
+}

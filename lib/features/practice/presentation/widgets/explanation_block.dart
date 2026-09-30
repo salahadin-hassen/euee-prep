@@ -2,41 +2,31 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design/tokens.dart';
 
-/// Post-submit feedback block: correct/incorrect banner, explanation,
-/// optional textbook reference, and resource navigation links.
+/// Post-submit feedback block: correct/incorrect banner, explicit
+/// answer labels, explanation, and optional textbook reference.
 ///
 /// No card/box around the explanation itself — a soft top border is
 /// enough separation from the answer options above, avoiding
 /// boxes-within-boxes (per the design review).
-///
-/// Resource links are navigation-only — tapping pushes the real
-/// Notes/Flashcards/Mind Map screen for this chapter; nothing renders
-/// inline here.
 class ExplanationBlock extends StatelessWidget {
   const ExplanationBlock({
     super.key,
     required this.isCorrect,
     required this.explanation,
     this.textbookReference,
-    required this.notesAvailable,
-    required this.flashcardsAvailable,
-    required this.mindMapAvailable,
-    required this.onViewNotes,
-    required this.onViewFlashcards,
-    required this.onViewMindMap,
+    required this.yourAnswerLabel,
+    required this.correctAnswerLabel,
   });
 
   final bool isCorrect;
   final String explanation;
   final String? textbookReference;
 
-  final bool notesAvailable;
-  final bool flashcardsAvailable;
-  final bool mindMapAvailable;
+  /// e.g. "B" or "B. Mitochondria"
+  final String yourAnswerLabel;
 
-  final VoidCallback onViewNotes;
-  final VoidCallback onViewFlashcards;
-  final VoidCallback onViewMindMap;
+  /// e.g. "C" or "C. Chloroplast"
+  final String correctAnswerLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +60,20 @@ class ExplanationBlock extends StatelessWidget {
               ),
             ],
           ),
+          if (!isCorrect) ...[
+            const SizedBox(height: AppSpacing.spaceSm),
+            _AnswerLine(
+              label: 'Your answer',
+              value: yourAnswerLabel,
+              color: AppColors.colorError,
+            ),
+            const SizedBox(height: AppSpacing.spaceXs),
+            _AnswerLine(
+              label: 'Correct answer',
+              value: correctAnswerLabel,
+              color: AppColors.colorSuccess,
+            ),
+          ],
           const SizedBox(height: AppSpacing.spaceSm),
           Text(explanation, style: AppTypography.typeBody),
           if (textbookReference != null) ...[
@@ -86,57 +90,40 @@ class ExplanationBlock extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: AppSpacing.spaceMd),
-          Wrap(
-            spacing: AppSpacing.spaceSm,
-            runSpacing: AppSpacing.spaceSm,
-            children: [
-              if (notesAvailable)
-                _ResourceLinkChip(label: 'View Notes', onTap: onViewNotes),
-              if (flashcardsAvailable)
-                _ResourceLinkChip(
-                    label: 'View Flashcards', onTap: onViewFlashcards),
-              if (mindMapAvailable)
-                _ResourceLinkChip(label: 'View Mind Map', onTap: onViewMindMap),
-            ],
-          ),
         ],
       ),
     );
   }
 }
 
-class _ResourceLinkChip extends StatelessWidget {
-  const _ResourceLinkChip({required this.label, required this.onTap});
+class _AnswerLine extends StatelessWidget {
+  const _AnswerLine({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   final String label;
-  final VoidCallback onTap;
+  final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: '$label. Double tap to open.',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.radiusFull),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.spaceMd,
-            vertical: AppSpacing.spaceSm,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.colorPrimary),
-            borderRadius: BorderRadius.circular(AppRadius.radiusFull),
-          ),
+    return Row(
+      children: [
+        Text(
+          '$label: ',
+          style: AppTypography.typeBody
+              .copyWith(color: AppColors.colorTextSecondary),
+        ),
+        Expanded(
           child: Text(
-            label,
-            style: AppTypography.typeCaption
-                .copyWith(color: AppColors.colorPrimary),
+            value,
+            style: AppTypography.typeBody
+                .copyWith(fontWeight: FontWeight.w600, color: color),
           ),
         ),
-      ),
+      ],
     );
   }
 }
