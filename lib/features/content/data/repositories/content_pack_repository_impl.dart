@@ -1,3 +1,4 @@
+import '../../../../core/utilities/semver.dart';
 import '../../domain/models/content_pack.dart';
 import '../../domain/repositories/content_pack_repository.dart';
 import '../local_data_sources/content_pack_local_data_source.dart';
@@ -30,6 +31,19 @@ class ContentPackRepositoryImpl implements ContentPackRepository {
   Future<ContentPack?> getById(String id) async {
     final model = await _localDataSource.getById(id);
     return model == null ? null : _toDomain(model);
+  }
+
+  @override
+  Future<ContentPack?> getLatestForPackId(String packId) async {
+    final prefix = '$packId#';
+    ContentPackPersistenceModel? latest;
+    for (final model in await _localDataSource.getAll()) {
+      if (!model.id.startsWith(prefix)) continue;
+      if (latest == null || compareSemVer(model.packVersion, latest.packVersion) > 0) {
+        latest = model;
+      }
+    }
+    return latest == null ? null : _toDomain(latest);
   }
 
   ContentPackPersistenceModel _toPersistence(ContentPack pack) {

@@ -109,18 +109,100 @@ void main() {
       expect(nullableColumns, isEmpty);
     });
   });
+
+  group('getLatestForPackId', () {
+    setUp(() async {
+      database = db.AppDatabase.forTesting(NativeDatabase.memory());
+      await database.into(database.streams).insert(
+            const db.StreamsCompanion(
+              id: drift.Value(1),
+              slug: drift.Value('natural_science'),
+            ),
+          );
+      await database.into(database.subjects).insert(
+            const db.SubjectsCompanion(
+              id: drift.Value(1),
+              streamId: drift.Value(1),
+              slug: drift.Value('physics'),
+              title: drift.Value('Physics'),
+            ),
+          );
+      repository = ContentPackRepositoryImpl(
+        ContentPackLocalDataSource(database),
+      );
+    });
+
+    tearDown(() async {
+      await database.close();
+    });
+
+    test('returns null when the paper is not installed', () async {
+      final latest =
+          await repository.getLatestForPackId('physics-2015-natural-science');
+
+      expect(latest, isNull);
+    });
+
+    test('returns the highest installed version by semver, not import time',
+        () async {
+      await repository.insert(
+        _pack(
+          id: 'physics-2015-natural-science#1.9.0',
+          packVersion: '1.9.0',
+          packKey: 'natural_science-physics',
+          importedAt: '2026-03-01T00:00:00Z',
+        ),
+      );
+      await repository.insert(
+        _pack(
+          id: 'physics-2015-natural-science#1.10.0',
+          packVersion: '1.10.0',
+          packKey: 'natural_science-physics',
+          importedAt: '2026-01-01T00:00:00Z', // imported first, still newest
+        ),
+      );
+
+      final latest =
+          await repository.getLatestForPackId('physics-2015-natural-science');
+
+      expect(latest?.packVersion, '1.10.0');
+    });
+
+    test('only matches versions of the requested paper', () async {
+      await repository.insert(
+        _pack(
+          id: 'physics-2015-natural-science#1.0.0',
+          packVersion: '1.0.0',
+          packKey: 'natural_science-physics',
+        ),
+      );
+      await repository.insert(
+        _pack(
+          id: 'physics-2016-natural-science#1.0.0',
+          packVersion: '1.0.0',
+          packKey: 'natural_science-physics-2016',
+        ),
+      );
+
+      final latest =
+          await repository.getLatestForPackId('physics-2015-natural-science');
+
+      expect(latest?.id, 'physics-2015-natural-science#1.0.0');
+    });
+  });
 }
 
 ContentPack _pack({
   String id = 'natural_science-physics#1.0.0',
   String packVersion = '1.0.0',
+  String packKey = 'natural_science-physics',
   String checksum = 'sha256:one',
   String importedAt = '2026-01-01T00:00:00Z',
   int subjectId = 1,
 }) {
   return ContentPack(
     id: id,
-    packKey: 'natural_science-physics',
+    packKey: packKey,
     subjectId: subjectId,
     packVersion: packVersion,
     schemaVersion: '2',

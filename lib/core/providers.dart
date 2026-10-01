@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../features/content/data/local_data_sources/content_pack_local_data_source.dart';
 import '../features/content/data/local_data_sources/drift_import_transaction.dart';
@@ -20,17 +23,26 @@ import '../features/entitlements/domain/models/entitlement.dart'
     as entitlement_domain;
 import '../features/entitlements/domain/repositories/entitlement_repository.dart';
 import '../features/entitlements/domain/repositories/install_identity_repository.dart';
+import '../features/exams/data/remote_data_sources/published_paper_remote_data_source.dart';
+import '../features/exams/data/repositories/published_paper_repository_impl.dart';
+import '../features/exams/domain/models/published_paper.dart';
+import '../features/exams/domain/repositories/published_paper_repository.dart';
+import '../features/exams/domain/services/paper_download_service.dart';
+import '../features/exams/presentation/paper_download_controller.dart';
 import '../features/progress/data/local_data_sources/attempt_local_data_source.dart';
 import '../features/progress/data/repositories/attempt_repository_impl.dart';
 import '../features/progress/domain/repositories/attempt_repository.dart';
 import '../features/streams/data/local_data_sources/stream_local_data_source.dart';
 import '../features/streams/data/repositories/stream_repository_impl.dart';
+import '../features/streams/domain/models/stream_model.dart';
 import '../features/streams/domain/repositories/stream_repository.dart';
 import '../features/subjects/data/local_data_sources/subject_local_data_source.dart';
 import '../features/subjects/data/repositories/subject_repository_impl.dart';
 import '../features/subjects/domain/models/subject.dart' as domain;
 import '../features/subjects/domain/repositories/subject_repository.dart';
+import 'config/app_config.dart';
 import 'database/app_database.dart';
+import 'network/network_client.dart';
 
 /// Singleton AppDatabase — one instance for the app's lifetime.
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -63,6 +75,65 @@ final subjectsByStreamProvider =
   },
 );
 
+/// Real paper/question/progress counts for every subject in a stream.
+///
+/// Derived from the Exam and Attempt tables in a single pass — no
+/// per-subject query fan-out. Attempt history is append-only
+/// (Decision 016) and is recalculated on read, never cached.
+final subjectStatsForStreamProvider =
+    FutureProvider.autoDispose.family<Map<int, SubjectStats>, int>(
+  (ref, streamId) async {
+    final subjects =
+        await ref.watch(subjectRepositoryProvider).getByStreamId(streamId);
+    final exams = await ref.watch(examRepositoryProvider).getAll();
+    final attempts = await ref.watch(attemptRepositoryProvider).getAll();
+
+    final examsBySubject = <int, List<exam_model.Exam>>{};
+    for (final exam in exams) {
+      examsBySubject.putIfAbsent(exam.subjectId, () => []).add(exam);
+    }
+    final attemptedQuestionIds = attempts.map((a) => a.questionId).toSet();
+
+    final result = <int, SubjectStats>{};
+    for (final subject in subjects) {
+      final questionIds = <int>{};
+      final subjectExams = examsBySubject[subject.id] ?? const [];
+      for (final exam in subjectExams) {
+        questionIds.addAll(exam.questionIds);
+      }
+      result[subject.id] = SubjectStats(
+        paperCount: subjectExams.length,
+        questionCount: questionIds.length,
+        answeredCount: questionIds.intersection(attemptedQuestionIds).length,
+      );
+    }
+    return result;
+  },
+);
+
+/// Paper / question / answered counts for one subject, derived from real
+/// Exam and Attempt rows.
+class SubjectStats {
+  const SubjectStats({
+    required this.paperCount,
+    required this.questionCount,
+    required this.answeredCount,
+  });
+
+  /// Number of imported exam papers ("papers") for the subject.
+  final int paperCount;
+
+  /// Distinct questions across the subject's papers.
+  final int questionCount;
+
+  /// Distinct questions from those papers that have been answered.
+  final int answeredCount;
+
+  /// 0.0–1.0, or `null` when the subject has no questions imported yet.
+  double? get progress =>
+      questionCount == 0 ? null : answeredCount / questionCount;
+}
+
 // ---------------------------------------------------------------------------
 // Streams
 // ---------------------------------------------------------------------------
@@ -84,6 +155,12 @@ final preferredStreamIdProvider = FutureProvider<int?>((ref) async {
   final db = ref.watch(databaseProvider);
   final value = await db.getSetting('preferred_stream_id');
   return value != null ? int.tryParse(value) : null;
+});
+
+/// All streams, loaded once. Screens derive display names from this
+/// instead of kicking off a fresh repository future on every build.
+final allStreamsProvider = FutureProvider<List<StreamModel>>((ref) {
+  return ref.watch(streamRepositoryProvider).getAll();
 });
 
 // ---------------------------------------------------------------------------
@@ -198,8 +275,74 @@ final contentImportServiceProvider = Provider<ContentImportService>((ref) {
     questionRepository: ref.watch(questionRepositoryProvider),
     examRepository: ref.watch(examRepositoryProvider),
     transaction: DriftImportTransaction(ref.watch(databaseProvider)),
+    currentAppVersion: AppConfig.currentAppVersion,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Published papers (catalog + download)
+// ---------------------------------------------------------------------------
+
+/// The app's single HTTP seam (`dart:io`-backed; see `core/network`).
+final networkClientProvider = Provider<NetworkClient>(
+  (ref) => IoNetworkClient(),
+);
+
+final publishedPaperRemoteDataSourceProvider =
+    Provider<PublishedPaperRemoteDataSource>(
+  (ref) => PublishedPaperRemoteDataSource(
+    network: ref.watch(networkClientProvider),
+    baseUrl: AppConfig.apiBaseUrl,
+  ),
+);
+
+/// Catalog reads + installed-version lookups (reads only — importing stays
+/// with `ContentImportService`).
+final publishedPaperRepositoryProvider = Provider<PublishedPaperRepository>(
+  (ref) => PublishedPaperRepositoryImpl(
+    remote: ref.watch(publishedPaperRemoteDataSourceProvider),
+    contentPackRepository: ref.watch(contentPackRepositoryProvider),
+  ),
+);
+
+/// Where downloads are staged before validation (platform temp dir in the
+/// app; overridable in tests).
+final temporaryDirectoryProvider = Provider<Future<Directory> Function()>(
+  (ref) => getTemporaryDirectory,
+);
+
+/// Download pipeline: skip-if-installed → stream ZIP to temp → validate →
+/// extract `content-pack.json` → existing import pipeline → cleanup.
+final paperDownloadServiceProvider = Provider<PaperDownloadService>(
+  (ref) => PaperDownloadService(
+    repository: ref.watch(publishedPaperRepositoryProvider),
+    contentPackRepository: ref.watch(contentPackRepositoryProvider),
+    importService: ref.watch(contentImportServiceProvider),
+    network: ref.watch(networkClientProvider),
+    temporaryDirectory: ref.watch(temporaryDirectoryProvider),
+  ),
+);
+
+/// Catalog entries for a query, each joined with its install status — the
+/// list the Past Papers UI renders (Available / Installed / Update available).
+final papersWithStatusProvider = FutureProvider.autoDispose
+    .family<List<PaperAvailability>, PublishedPaperQuery>(
+  (ref, query) async {
+    final repository = ref.watch(publishedPaperRepositoryProvider);
+    final papers = await repository.fetchPapers(
+      stream: query.stream,
+      subjectSlug: query.subjectSlug,
+      year: query.year,
+    );
+    return repository.withInstallStatus(papers);
+  },
+);
+
+/// Download lifecycle state (Downloading with progress / Installed / Failed).
+final paperDownloadControllerProvider =
+    NotifierProvider<PaperDownloadController, PaperDownloadState>(
+  PaperDownloadController.new,
+);
 
 // ---------------------------------------------------------------------------
 // Attempts

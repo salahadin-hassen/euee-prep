@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../../core/utilities/semver.dart';
 import '../../../streams/domain/repositories/stream_repository.dart';
 import '../../../subjects/domain/repositories/subject_repository.dart';
 import '../../../subjects/domain/models/subject.dart';
@@ -103,7 +104,9 @@ class ContentImportService {
     try {
       pack = ContentPackFile.parse(rawJson);
     } on ContentPackFormatException catch (e) {
-      return ContentImportResult.failure([ContentImportIssue(e.message)]);
+      return ContentImportResult.failure([
+        ContentImportIssue(e.message, code: ContentImportIssueCode.malformedJson),
+      ]);
     }
 
     final issues = const ContentPackValidator().validate(pack);
@@ -115,15 +118,17 @@ class ContentImportService {
       return ContentImportResult.failure(const [
         ContentImportIssue(
           'checksum mismatch — the pack does not match its declared checksum',
+          code: ContentImportIssueCode.checksumMismatch,
         ),
       ]);
     }
 
-    if (_compareSemVer(pack.minimumAppVersion, currentAppVersion) > 0) {
+    if (compareSemVer(pack.minimumAppVersion, currentAppVersion) > 0) {
       return ContentImportResult.failure([
         ContentImportIssue(
           'pack requires app version ${pack.minimumAppVersion} '
           'but the app is $currentAppVersion',
+          code: ContentImportIssueCode.incompatibleAppVersion,
         ),
       ]);
     }
@@ -185,6 +190,7 @@ class ContentImportService {
             'subject "${pack.subject.slug}" title changed from '
             '"${existingSubject.title}" to "${pack.subject.title}" across '
             'pack versions — content is immutable',
+            code: ContentImportIssueCode.importFailed,
           ),
         );
       }
@@ -262,18 +268,6 @@ int _maxPlusOne(Iterable<int> ids) {
     if (id > max) max = id;
   }
   return max + 1;
-}
-
-int _compareSemVer(String a, String b) {
-  final partsA = a.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-  final partsB = b.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-  final length = partsA.length > partsB.length ? partsA.length : partsB.length;
-  for (var i = 0; i < length; i++) {
-    final x = i < partsA.length ? partsA[i] : 0;
-    final y = i < partsB.length ? partsB[i] : 0;
-    if (x != y) return x < y ? -1 : 1;
-  }
-  return 0;
 }
 
 String _nowIso8601() => DateTime.now().toUtc().toIso8601String();
