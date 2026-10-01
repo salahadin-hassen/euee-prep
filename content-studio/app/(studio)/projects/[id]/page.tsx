@@ -6,6 +6,7 @@ import { friendlyStatus } from "@/lib/status";
 import { InviteForm } from "./invite-form";
 import { RevokeButton } from "./revoke-button";
 import { ExportButton } from "./export-button";
+import { PublishButton } from "./publish-button";
 import { approveProject } from "../../_actions/approval";
 import { ImportQuestionsForm } from "./import-questions-form";
 
@@ -219,6 +220,11 @@ export default async function PaperDetailPage({
           {isAdmin && typed.status === "approved" && (
             <div className="qa-stat">
               <ExportButton projectId={typed.id} />
+            </div>
+          )}
+          {isAdmin && typed.status === "approved" && (
+            <div className="qa-stat">
+              <PublishButton projectId={typed.id} />
             </div>
           )}
         </div>

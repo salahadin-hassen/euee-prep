@@ -80,21 +80,38 @@ Entitlements are revocable and never expire on their own (Decision 033): `status
 
 ---
 
-## `GET /api/content-packs?stream={slug}&subject={slug}`
+## `GET /api/published-papers?stream={slug}&subject={slug}&year={year}`
 
-Fetch the latest published pack metadata (and download URL) for a subject. **Both parameters are required** (Decision 009/031): subject slugs are per-stream — both streams have their own `mathematics`, `english`, and `sat_aptitude` records — so a subject slug alone is ambiguous.
+Fetch the published v3 exam papers the Past Papers screen offers for download. All three parameters are optional filters (applied when present); malformed values fail the whole request with `400`. The response lists **one entry per published pack version** so students can download individual subject/year papers.
+
+Implemented by the Content Studio route handler `app/api/published-papers/route.ts`, which reads `public.published_papers` with the service-role client (secrets stay server-side; there is deliberately no `to anon` RLS policy) and mints each `download_url` as a short-lived signed URL (TTL 3600 s) for the private `published-papers` bucket. Responses carry `Cache-Control: public, max-age=60`.
 
 Response `200`:
 ```json
 {
-  "pack_version": "string",
-  "schema_version": "string",
-  "generated_at": "ISO8601 string",
-  "checksum": "string",
-  "minimum_app_version": "string",
-  "download_url": "string"
+  "papers": [
+    {
+      "id": "uuid",
+      "pack_id": "physics-2015-natural-science",
+      "subject_slug": "physics",
+      "subject_title": "Physics",
+      "stream": "natural_science",
+      "year": 2015,
+      "title": "EUEE Physics 2015",
+      "question_count": 30,
+      "pack_version": "1.0.0",
+      "size_bytes": 123456,
+      "storage_path": "physics-2015-natural-science/1.0.0.zip",
+      "published_at": "ISO8601 string",
+      "minimum_app_version": "1.0.0",
+      "updated_at": "ISO8601 string",
+      "download_url": "short-lived signed URL"
+    }
+  ]
 }
 ```
+
+> **Note:** this supersedes the earlier `GET /api/content-packs` sketch below, which returned only the single latest pack for a subject. Packs are immutable per version (Decision 015/021) and students download papers one at a time, so the catalog enumerates every published `pack_id` + `pack_version` instead. The old sketch is kept for reference until the endpoint is removed from history.
 
 ---
 
