@@ -16,11 +16,19 @@ class ProgressBar extends StatelessWidget {
     super.key,
     required this.progress,
     this.height = 6,
+    this.trackColor = AppColors.colorBorder,
+    this.fillColor = AppColors.colorPrimary,
   });
 
   /// 0.0 to 1.0. Values outside that range are clamped.
   final double progress;
   final double height;
+
+  /// Track (unfilled) color — overridden on the navy Continue card.
+  final Color trackColor;
+
+  /// Fill color — overridden per subject accent on Home preview rows.
+  final Color fillColor;
 
   @override
   Widget build(BuildContext context) {
@@ -39,12 +47,12 @@ class ProgressBar extends StatelessWidget {
                 Container(
                   height: height,
                   width: constraints.maxWidth,
-                  color: AppColors.colorBorder,
+                  color: trackColor,
                 ),
                 Container(
                   height: height,
                   width: constraints.maxWidth * clamped,
-                  color: AppColors.colorPrimary,
+                  color: fillColor,
                 ),
               ],
             );

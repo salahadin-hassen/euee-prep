@@ -96,6 +96,46 @@ class AppRadius {
   static const double radiusMd = 8;
   static const double radiusLg = 16;
   static const double radiusFull = 999;
+
+  /// Surface radius for the Home / Subjects card surfaces as drawn in the
+  /// approved reference screens (between radiusMd and radiusLg).
+  /// Proposed addition from the Home design review — awaiting product
+  /// sign-off to fold into 06_DESIGN_SYSTEM.md formally.
+  static const double radiusCard = 12;
+}
+
+/// Brand palette sampled from the approved Home and Subjects reference
+/// screens (Decision 018 addendum).
+///
+/// Additive only: [AppColors] keeps its existing placeholder values so
+/// screens outside the Home/Subjects redesign do not shift. These are the
+/// values the two reference screens are drawn with.
+class AppBrand {
+  AppBrand._();
+
+  /// Deep navy — Continue Studying card, unlock bars, primary buttons.
+  static const Color navy = Color(0xFF142A4E);
+
+  /// Brand blue — Subjects app bar, links, section labels, active tab.
+  static const Color blue = Color(0xFF1C4E9C);
+
+  /// Pale blue tint — icon tiles, info rows, unlock card.
+  static const Color blueTint = Color(0xFFE8EEF9);
+
+  /// Warm cream page background behind the Home cards.
+  static const Color cream = Color(0xFFF6F3EC);
+
+  /// Locked/muted surface on the Subjects list.
+  static const Color lockedSurface = Color(0xFFF1F2F4);
+
+  /// Disabled/locked foreground.
+  static const Color lockedForeground = Color(0xFF8A8D93);
+
+  /// Positive confirmations (offline-ready row).
+  static const Color positive = Color(0xFF2FA85A);
+
+  /// Neutral inactive tab / secondary text on light surfaces.
+  static const Color inactive = Color(0xFF9AA0A6);
 }
 
 /// Stroke/border-width tokens — proposed addition (flagged during the
