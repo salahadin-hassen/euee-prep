@@ -30,6 +30,8 @@ Future<void> openSubject(
         builder: (context) => SubjectDetailScreen(
           subjectId: subject.id,
           subjectName: subject.title,
+          subjectSlug: subject.slug,
+          streamId: streamId,
         ),
       ),
     );

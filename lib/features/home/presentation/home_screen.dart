@@ -273,7 +273,7 @@ class _WelcomeState extends StatelessWidget {
   }
 }
 
-/// Shown when the Preferred Stream has no imported subjects yet.
+/// Shown when the Preferred Stream has no subjects yet.
 class _EmptyHome extends StatelessWidget {
   const _EmptyHome();
 
@@ -294,12 +294,6 @@ class _EmptyHome extends StatelessWidget {
             Text(
               'No subjects available',
               style: AppTypography.typeHeading3,
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppSpacing.spaceSm),
-            Text(
-              'Import a content pack to see subjects here.',
-              style: AppTypography.typeCaption,
               textAlign: TextAlign.center,
             ),
           ],

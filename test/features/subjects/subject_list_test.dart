@@ -380,6 +380,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No subjects available'), findsOneWidget);
+      // Learners download papers — there is no manual import entry point.
+      expect(find.text('Import Content Pack'), findsNothing);
+      expect(find.text('Import a content pack to see subjects here.'),
+          findsNothing);
     });
 
     testWidgets('shows lock icon on subjects past the free-sample limit',

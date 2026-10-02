@@ -5,7 +5,6 @@ import '../../../core/design/app_button.dart';
 import '../../../core/design/subject_palette.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
-import '../../content/presentation/import_screen.dart';
 import '../../entitlements/domain/services/access_policy.dart';
 import '../../entitlements/presentation/payment_submission_flow.dart';
 import '../../streams/presentation/onboarding_screen.dart';
@@ -416,47 +415,28 @@ class _SkeletonCard extends StatelessWidget {
   }
 }
 
-/// Shown when the preferred stream is set but contains no subjects
-/// (content pack not yet imported).
+/// Shown when the preferred stream is set but contains no subjects yet.
 class _EmptySubjects extends StatelessWidget {
   const _EmptySubjects();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.spaceLg),
+        padding: EdgeInsets.all(AppSpacing.spaceLg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.library_books_outlined,
               size: AppIconSize.iconSizeXl,
               color: AppColors.colorTextSecondary,
             ),
-            const SizedBox(height: AppSpacing.spaceMd),
-            const Text(
+            SizedBox(height: AppSpacing.spaceMd),
+            Text(
               'No subjects available',
               style: AppTypography.typeHeading3,
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.spaceSm),
-            const Text(
-              'Import a content pack to see subjects here.',
-              style: AppTypography.typeCaption,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.spaceLg),
-            AppButton(
-              label: 'Import Content Pack',
-              isFullWidth: true,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ImportScreen(),
-                  ),
-                );
-              },
             ),
           ],
         ),

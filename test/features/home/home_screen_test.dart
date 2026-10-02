@@ -93,6 +93,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No subjects available'), findsOneWidget);
+    // Learners download papers — no manual content-pack import copy.
+    expect(find.text('Import Content Pack'), findsNothing);
+    expect(find.text('Import a content pack to see subjects here.'), findsNothing);
   });
 
   testWidgets('renders real dashboard numbers, preview and offline row',
