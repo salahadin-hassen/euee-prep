@@ -334,7 +334,41 @@ void main() {
 
       expect(find.text('Physics'), findsOneWidget);
       expect(find.text('Mathematics'), findsOneWidget);
-      expect(find.text('Studying: Natural Science'), findsOneWidget);
+      // Preferred Stream name is shown as the blue app bar title.
+      expect(find.text('Natural Science'), findsOneWidget);
+    });
+
+    testWidgets('renders without layout overflow on a small phone screen',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final streamRepo = StreamRepositoryImpl(StreamLocalDataSource(database));
+      final subjectRepo =
+          SubjectRepositoryImpl(SubjectLocalDataSource(database));
+
+      await streamRepo.insert(
+        const StreamModel(id: 1, slug: 'natural_science'),
+      );
+      await subjectRepo.insert(
+        const Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
+      );
+      await subjectRepo.insert(
+        const Subject(
+          id: 2,
+          streamId: 1,
+          slug: 'mathematics',
+          title: 'Mathematics',
+        ),
+      );
+      await database.setSetting('preferred_stream_id', '1');
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Natural Science'), findsOneWidget);
+      expect(find.text('Unlock all subjects'), findsOneWidget);
     });
 
     testWidgets('shows empty state when stream is set but no subjects exist',
@@ -348,7 +382,8 @@ void main() {
       expect(find.text('No subjects available'), findsOneWidget);
     });
 
-    testWidgets('shows lock icon when not entitled', (tester) async {
+    testWidgets('shows lock icon on subjects past the free-sample limit',
+        (tester) async {
       final streamRepo = StreamRepositoryImpl(StreamLocalDataSource(database));
       final subjectRepo =
           SubjectRepositoryImpl(SubjectLocalDataSource(database));
@@ -362,9 +397,7 @@ void main() {
       await streamRepo.insert(
         const StreamModel(id: 1, slug: 'natural_science'),
       );
-      await subjectRepo.insert(
-        const Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
-      );
+      await _insertStreamSubjects(subjectRepo);
       await database.setSetting('preferred_stream_id', '1');
 
       await tester.pumpWidget(buildTestWidget(
@@ -373,8 +406,10 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Lock icon present for non-entitled subject
+      // The first AccessPolicy.freeSampleLimit subjects (slug order) stay
+      // open; only the fourth row is drawn locked.
       expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.text('Physics'), findsOneWidget);
     });
 
     testWidgets('shows no lock icon when entitled', (tester) async {
@@ -435,9 +470,7 @@ void main() {
       await streamRepo.insert(
         const StreamModel(id: 1, slug: 'natural_science'),
       );
-      await subjectRepo.insert(
-        const Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
-      );
+      await _insertStreamSubjects(subjectRepo);
       await database.setSetting('preferred_stream_id', '1');
 
       await tester.pumpWidget(buildTestWidget(
@@ -446,7 +479,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Verify semantic label indicates locked state via semantics node
+      // Verify semantic label indicates locked state via semantics node.
+      // Rows render in slug order, so Physics sits past the free-sample
+      // window.
       final semantics = tester.getSemantics(find.text('Physics'));
       expect(semantics.label, contains('locked'));
     });
@@ -466,9 +501,7 @@ void main() {
       await streamRepo.insert(
         const StreamModel(id: 1, slug: 'natural_science'),
       );
-      await subjectRepo.insert(
-        const Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
-      );
+      await _insertStreamSubjects(subjectRepo);
       await database.setSetting('preferred_stream_id', '1');
 
       await tester.pumpWidget(buildTestWidget(
@@ -477,12 +510,46 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Tap the locked subject
+      // Tap the subject past AccessPolicy.freeSampleLimit (slug order
+      // puts Physics fourth).
       await tester.tap(find.text('Physics'));
       await tester.pumpAndSettle();
 
       // Should navigate to PaymentSubmissionFlow — verify step 1 header
       expect(find.textContaining('Unlock'), findsOneWidget);
+    });
+
+    testWidgets('opens the first three subjects as free samples while locked',
+        (tester) async {
+      final streamRepo = StreamRepositoryImpl(StreamLocalDataSource(database));
+      final subjectRepo =
+          SubjectRepositoryImpl(SubjectLocalDataSource(database));
+      final installIdRepo = InstallIdentityRepositoryImpl(
+        InstallIdentityLocalDataSource(database),
+      );
+      final entitlementRepo = EntitlementRepositoryImpl(
+        EntitlementLocalDataSource(database),
+      );
+
+      await streamRepo.insert(
+        const StreamModel(id: 1, slug: 'natural_science'),
+      );
+      await _insertStreamSubjects(subjectRepo);
+      await database.setSetting('preferred_stream_id', '1');
+
+      await tester.pumpWidget(buildTestWidget(
+        installIdRepo: installIdRepo,
+        entitlementRepo: entitlementRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      // First subject in display (slug) order sits inside the
+      // free-sample window even though the stream has no entitlement.
+      await tester.tap(find.text('Biology'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.textContaining('Unlock'), findsNothing);
     });
 
     testWidgets('tapping entitled subject navigates to detail screen',
@@ -532,4 +599,18 @@ void main() {
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
   });
+}
+
+/// Seeds four subjects — one more than `AccessPolicy.freeSampleLimit` —
+/// so a locked stream still has a row that is actually closed.
+Future<void> _insertStreamSubjects(SubjectRepositoryImpl subjectRepo) async {
+  const subjects = [
+    Subject(id: 1, streamId: 1, slug: 'physics', title: 'Physics'),
+    Subject(id: 2, streamId: 1, slug: 'mathematics', title: 'Mathematics'),
+    Subject(id: 3, streamId: 1, slug: 'chemistry', title: 'Chemistry'),
+    Subject(id: 4, streamId: 1, slug: 'biology', title: 'Biology'),
+  ];
+  for (final subject in subjects) {
+    await subjectRepo.insert(subject);
+  }
 }

@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/design/app_button.dart';
+import '../../../core/design/subject_palette.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
-import '../../content/domain/repositories/exam_repository.dart';
 import '../../content/presentation/import_screen.dart';
+import '../../entitlements/domain/services/access_policy.dart';
 import '../../entitlements/presentation/payment_submission_flow.dart';
 import '../../streams/presentation/onboarding_screen.dart';
 import '../../subjects/domain/models/subject.dart';
 import 'models/subject_ui_model.dart';
-import 'subject_detail_screen.dart';
+import 'subject_actions.dart';
 import 'widgets/subject_card.dart';
-import 'widgets/subject_list_header.dart';
 
-/// Subject List (Home) screen — the navigation root after onboarding
-/// (Decision 014). Shows only the 6 subjects belonging to the user's
-/// Preferred Stream (Decision 029) — never the other stream, in any
-/// state.
+/// Subject List screen — the second tab of the shell and the "Subjects"
+/// destination of Decision 014's Home → Subjects → Subject navigation.
+///
+/// Shows only the subjects belonging to the student's Preferred Stream
+/// (Decision 029), each with its real paper/question counts. Locked rows
+/// route to the payment flow; the "Unlock all subjects" card is shown only
+/// while the stream has no active entitlement.
 ///
 /// Data is loaded via Riverpod providers backed by the Subject repository
 /// → Subject Local Data Source → Drift. No mock data is used.
@@ -31,27 +34,22 @@ class SubjectListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.colorBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.colorBackground,
+        backgroundColor: AppBrand.blue,
         elevation: 0,
-        title: const Text('EUEE Prep', style: AppTypography.typeHeading2),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () {
-              Navigator.of(context).pushNamed('/settings');
-            },
-          ),
-        ],
+        leading: IconButton(
+          tooltip: 'Menu',
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+        ),
+        title: const _StreamTitle(),
       ),
       body: SafeArea(
+        top: false,
         child: preferredStreamAsync.when(
           loading: () => const _SubjectListSkeleton(),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (streamId) {
-            if (streamId == null) {
-              return const _NoStreamSelected();
-            }
+            if (streamId == null) return const _NoStreamSelected();
             return _StreamSubjectsView(streamId: streamId);
           },
         ),
@@ -60,8 +58,32 @@ class SubjectListScreen extends ConsumerWidget {
   }
 }
 
-/// Displays subjects for the given stream, with a resolved stream name
-/// for the header label.
+/// Bold white Preferred Stream name in the blue app bar.
+class _StreamTitle extends ConsumerWidget {
+  const _StreamTitle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streamId = ref.watch(preferredStreamIdProvider).valueOrNull;
+    final streams = ref.watch(allStreamsProvider).valueOrNull;
+    var name = '';
+    if (streamId != null && streams != null) {
+      final match = streams.where((s) => s.id == streamId).toList();
+      if (match.isNotEmpty) name = streamDisplayName(match.first.slug);
+    }
+    return Text(
+      name,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+    );
+  }
+}
+
+/// Loads subjects, their real counts and the stream entitlement, then
+/// renders the list plus the unlock card when the stream is still locked.
 class _StreamSubjectsView extends ConsumerWidget {
   const _StreamSubjectsView({required this.streamId});
 
@@ -70,188 +92,203 @@ class _StreamSubjectsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final subjectsAsync = ref.watch(subjectsByStreamProvider(streamId));
-    final streamsAsync = ref.watch(streamRepositoryProvider).getAll();
-    final entitlementAsync = ref.watch(
-      activeEntitlementForStreamProvider(streamId),
-    );
+    final statsAsync = ref.watch(subjectStatsForStreamProvider(streamId));
+    final entitlementAsync =
+        ref.watch(activeEntitlementForStreamProvider(streamId));
+    final streams = ref.watch(allStreamsProvider).valueOrNull ?? const [];
+    final stream = streams.where((s) => s.id == streamId).toList();
+    final streamName =
+        stream.isNotEmpty ? streamDisplayName(stream.first.slug) : '';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FutureBuilder<List<dynamic>>(
-          future: streamsAsync,
-          builder: (context, snapshot) {
-            final streams = snapshot.data;
-            final stream = streams?.where((s) => s.id == streamId).toList();
-            final name = stream != null && stream.isNotEmpty
-                ? streamDisplayName(stream.first.slug)
-                : '';
-            return SubjectListHeader(streamName: name);
-          },
-        ),
-        Expanded(
-          child: subjectsAsync.when(
-            loading: () => const _SubjectListSkeleton(),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (subjects) {
-              if (subjects.isEmpty) {
-                return const _EmptySubjects();
-              }
-              final isEntitled = entitlementAsync.valueOrNull != null;
-              return _SubjectListWithCounts(
-                subjects: subjects,
-                isEntitled: isEntitled,
-                onSubjectTap: (subject) => _handleSubjectTap(
-                  context,
-                  ref,
-                  subject,
-                  isEntitled: isEntitled,
-                  streamId: streamId,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+    return subjectsAsync.when(
+      loading: () => const _SubjectListSkeleton(),
+      error: (e, _) => Center(child: Text('Error: $e')),
+      data: (subjects) {
+        if (subjects.isEmpty) return const _EmptySubjects();
 
-  Future<void> _handleSubjectTap(
-    BuildContext context,
-    WidgetRef ref,
-    Subject subject, {
-    required bool isEntitled,
-    required int streamId,
-  }) async {
-    if (isEntitled) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SubjectDetailScreen(
-            subjectId: subject.id,
-            subjectName: subject.title,
-          ),
-        ),
-      );
-    } else {
-      final streams = await ref.read(streamRepositoryProvider).getAll();
-      final stream = streams.where((s) => s.id == streamId).toList();
-      final streamSlug = stream.isNotEmpty ? stream.first.slug : '';
-      if (!context.mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => PaymentSubmissionFlow(
-            streamName: streamDisplayName(streamSlug),
-            onFlowComplete: () {
-              if (context.mounted) {
-                Navigator.of(context).pop();
-                ref.invalidate(activeEntitlementForStreamProvider(streamId));
-              }
-            },
-          ),
-        ),
-      );
-    }
-  }
-}
-
-/// Loads exam counts per subject, then renders the list.
-class _SubjectListWithCounts extends ConsumerWidget {
-  const _SubjectListWithCounts({
-    required this.subjects,
-    required this.isEntitled,
-    required this.onSubjectTap,
-  });
-
-  final List<Subject> subjects;
-  final bool isEntitled;
-  final ValueChanged<Subject> onSubjectTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final examRepo = ref.watch(examRepositoryProvider);
-
-    return FutureBuilder<Map<int, _SubjectStats>>(
-      future: _loadStats(examRepo, subjects),
-      builder: (context, snapshot) {
-        final stats = snapshot.data ?? {};
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.spaceMd,
-            0,
-            AppSpacing.spaceMd,
-            AppSpacing.spaceMd,
-          ),
-          itemCount: subjects.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.spaceMd),
-          itemBuilder: (context, index) {
-            final subject = subjects[index];
-            final s = stats[subject.id];
-            return SubjectCard(
-              subject: SubjectUiModel(
-                subjectId: subject.slug,
-                name: subject.title,
-                iconGlyph: _iconForSlug(subject.slug),
-                paperCount: s?.paperCount ?? 0,
-                questionCount: s?.questionCount ?? 0,
-                isEntitled: isEntitled,
-              ),
-              onTap: () => onSubjectTap(subject),
+        return statsAsync.when(
+          loading: () => const _SubjectListSkeleton(),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (stats) {
+            final isEntitled = entitlementAsync.valueOrNull != null;
+            return _SubjectListView(
+              subjects: subjects,
+              stats: stats,
+              isEntitled: isEntitled,
+              streamName: streamName,
+              streamId: streamId,
             );
           },
         );
       },
     );
   }
+}
 
-  Future<Map<int, _SubjectStats>> _loadStats(
-    ExamRepository repo,
-    List<Subject> subjects,
-  ) async {
-    final result = <int, _SubjectStats>{};
-    for (final subject in subjects) {
-      final exams = await repo.getBySubjectId(subject.id);
-      var totalQuestions = 0;
-      for (final exam in exams) {
-        totalQuestions += exam.questionIds.length;
-      }
-      result[subject.id] = _SubjectStats(
-        paperCount: exams.length,
-        questionCount: totalQuestions,
+class _SubjectListView extends ConsumerWidget {
+  const _SubjectListView({
+    required this.subjects,
+    required this.stats,
+    required this.isEntitled,
+    required this.streamName,
+    required this.streamId,
+  });
+
+  final Map<int, SubjectStats> stats;
+  final List<Subject> subjects;
+  final bool isEntitled;
+  final String streamName;
+  final int streamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = <Widget>[];
+    for (var i = 0; i < subjects.length; i++) {
+      final subject = subjects[i];
+      final s = stats[subject.id] ??
+          const SubjectStats(
+            paperCount: 0,
+            questionCount: 0,
+            answeredCount: 0,
+          );
+      final hasAccess =
+          AccessPolicy.isOpen(index: i, isEntitled: isEntitled);
+      items.add(
+        SubjectCard(
+          subject: SubjectUiModel(
+            subjectId: subject.slug,
+            name: subject.title,
+            iconGlyph: subjectIconForSlug(subject.slug),
+            paperCount: s.paperCount,
+            questionCount: s.questionCount,
+            isOpen: hasAccess,
+          ),
+          onTap: () => openSubject(
+            context,
+            ref,
+            subject: subject,
+            hasAccess: hasAccess,
+            streamId: streamId,
+          ),
+        ),
+      );
+      items.add(const SizedBox(height: AppSpacing.spaceMd));
+    }
+
+    if (!isEntitled) {
+      items.add(
+        _UnlockAllCard(
+          streamName: streamName,
+          lockedSubjectTitles: subjects.map((s) => s.title).toList(),
+          onUnlock: () => _openUnlock(context, ref),
+        ),
       );
     }
-    return result;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.spaceMd,
+        AppSpacing.spaceMd,
+        AppSpacing.spaceMd,
+        AppSpacing.spaceXl,
+      ),
+      children: items,
+    );
+  }
+
+  void _openUnlock(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaymentSubmissionFlow(
+          streamName: streamName,
+          onFlowComplete: () {
+            if (context.mounted) {
+              Navigator.of(context).pop();
+              ref.invalidate(activeEntitlementForStreamProvider(streamId));
+            }
+          },
+        ),
+      ),
+    );
   }
 }
 
-class _SubjectStats {
-  const _SubjectStats({required this.paperCount, required this.questionCount});
-  final int paperCount;
-  final int questionCount;
-}
+/// Light-blue upsell card shown while the whole stream is locked.
+class _UnlockAllCard extends StatelessWidget {
+  const _UnlockAllCard({
+    required this.streamName,
+    required this.lockedSubjectTitles,
+    required this.onUnlock,
+  });
 
-String _iconForSlug(String slug) {
-  switch (slug) {
-    case 'physics':
-      return '\u{1F9EA}';
-    case 'mathematics':
-      return '\u{1F4D0}';
-    case 'chemistry':
-      return '\u{2697}\u{FE0F}';
-    case 'biology':
-      return '\u{1F9EC}';
-    case 'english':
-      return '\u{1F4D6}';
-    case 'sat_aptitude':
-      return '\u{1F9E9}';
-    case 'geography':
-      return '\u{1F30D}';
-    case 'history':
-      return '\u{1F3DB}\u{FE0F}';
-    case 'economics':
-      return '\u{1F4B0}';
-    default:
-      return '\u{1F4DA}';
+  final String streamName;
+  final List<String> lockedSubjectTitles;
+  final VoidCallback onUnlock;
+
+  String get _listOfNames {
+    if (lockedSubjectTitles.isEmpty) return '';
+    if (lockedSubjectTitles.length == 1) return lockedSubjectTitles.single;
+    if (lockedSubjectTitles.length == 2) {
+      return '${lockedSubjectTitles.first} and ${lockedSubjectTitles.last}';
+    }
+    final head = lockedSubjectTitles.sublist(0, lockedSubjectTitles.length - 1);
+    return '${head.join(', ')} and ${lockedSubjectTitles.last}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppBrand.blueTint,
+        borderRadius: BorderRadius.circular(AppRadius.radiusCard),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Unlock all subjects',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppBrand.navy,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.spaceSm),
+          Text(
+            'Purchase the $streamName pack to access $_listOfNames papers.',
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: AppColors.colorTextSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.spaceMd),
+          Material(
+            color: AppBrand.navy,
+            borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+              onTap: onUnlock,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spaceMd,
+                  vertical: AppSpacing.spaceSm + 2,
+                ),
+                child: Text(
+                  'View options',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -287,7 +324,6 @@ class _NoStreamSelected extends StatelessWidget {
             const SizedBox(height: AppSpacing.spaceLg),
             AppButton(
               label: 'Select Stream',
-              variant: AppButtonVariant.primary,
               isFullWidth: true,
               onPressed: () {
                 Navigator.of(context).push(
@@ -304,7 +340,7 @@ class _NoStreamSelected extends StatelessWidget {
   }
 }
 
-/// Skeleton loading state — 6 placeholder cards matching SubjectCard's
+/// Skeleton loading state — placeholder rows matching SubjectCard's
 /// footprint.
 class _SubjectListSkeleton extends StatelessWidget {
   const _SubjectListSkeleton();
@@ -329,24 +365,24 @@ class _SkeletonCard extends StatelessWidget {
       height: 72,
       decoration: BoxDecoration(
         color: AppColors.colorSurface,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMd),
-        border: Border.all(color: AppColors.colorBorder),
+        borderRadius: BorderRadius.circular(AppRadius.radiusCard),
       ),
       padding: const EdgeInsets.all(AppSpacing.spaceMd),
       child: Row(
         children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.colorDisabled.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(AppRadius.radiusMd),
             ),
           ),
           const SizedBox(width: AppSpacing.spaceMd),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 120,

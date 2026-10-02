@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/design/tokens.dart';
-import '../../../../core/design/widgets/progress_bar.dart';
+import '../../../../core/design/widgets/subject_icon_tile.dart';
 import '../models/subject_ui_model.dart';
 
-/// One subject row on the Subject List (Home) screen.
+/// One subject row on the Subject List screen.
 ///
-/// Shows the subject name, real paper/question counts, and an optional
-/// progress bar for entitled subjects. No fake stats or marketing copy.
+/// Shows the subject's tinted icon tile, name and real paper/question
+/// counts. Locked subjects are drawn on the muted palette with a lock
+/// affordance instead of a chevron. No fake stats or marketing copy.
 class SubjectCard extends StatelessWidget {
   const SubjectCard({
     super.key,
@@ -19,7 +20,7 @@ class SubjectCard extends StatelessWidget {
   final VoidCallback onTap;
 
   String get _semanticLabel {
-    if (!subject.isEntitled) {
+    if (!subject.isOpen) {
       return '${subject.name}, locked. Double tap to unlock.';
     }
     final progress = subject.progress;
@@ -35,6 +36,9 @@ class SubjectCard extends StatelessWidget {
     final paperLabel = subject.paperCount == 1 ? 'paper' : 'papers';
     final questionLabel =
         subject.questionCount == 1 ? 'question' : 'questions';
+    final foreground = subject.isOpen
+        ? AppColors.colorTextPrimary
+        : AppBrand.lockedForeground;
 
     return Semantics(
       label: _semanticLabel,
@@ -42,45 +46,63 @@ class SubjectCard extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMd),
+        borderRadius: BorderRadius.circular(AppRadius.radiusCard),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.colorSurface,
-            borderRadius: BorderRadius.circular(AppRadius.radiusMd),
-            border: Border.all(color: AppColors.colorBorder),
+            color: subject.isOpen
+                ? AppColors.colorSurface
+                : AppBrand.lockedSurface,
+            borderRadius: BorderRadius.circular(AppRadius.radiusCard),
           ),
-          padding: const EdgeInsets.all(AppSpacing.spaceMd),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spaceMd,
+            vertical: AppSpacing.spaceMd,
+          ),
           child: Row(
             children: [
-              Text(subject.iconGlyph, style: const TextStyle(fontSize: 28)),
+              SubjectIconTile(
+                slug: subject.subjectId,
+                locked: !subject.isOpen,
+              ),
               const SizedBox(width: AppSpacing.spaceMd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(subject.name, style: AppTypography.typeHeading3),
+                    Text(
+                      subject.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: foreground,
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.spaceXs),
                     Text(
-                      '${subject.paperCount} $paperLabel \u2022 ${subject.questionCount} $questionLabel',
-                      style: AppTypography.typeCaption,
+                      '${subject.paperCount} $paperLabel'
+                      ' \u2022 ${subject.questionCount} $questionLabel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: subject.isOpen
+                            ? AppColors.colorTextSecondary
+                            : AppBrand.lockedForeground,
+                      ),
                     ),
-                    if (subject.isEntitled &&
-                        subject.progress != null &&
-                        subject.progress! > 0) ...[
-                      const SizedBox(height: AppSpacing.spaceSm),
-                      ProgressBar(progress: subject.progress!),
-                    ],
                   ],
                 ),
               ),
-              if (!subject.isEntitled) ...[
-                const SizedBox(width: AppSpacing.spaceSm),
-                const Icon(
-                  Icons.lock_outline,
-                  size: AppIconSize.iconSizeMd,
-                  color: AppColors.colorTextSecondary,
-                ),
-              ],
+              const SizedBox(width: AppSpacing.spaceSm),
+              subject.isOpen
+                  ? const Icon(
+                      Icons.chevron_right,
+                      size: AppIconSize.iconSizeMd,
+                      color: AppBrand.lockedForeground,
+                    )
+                  : const Icon(
+                      Icons.lock_outline,
+                      size: AppIconSize.iconSizeMd,
+                      color: AppBrand.lockedForeground,
+                    ),
             ],
           ),
         ),

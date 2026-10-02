@@ -5,7 +5,7 @@ class SubjectUiModel {
     required this.iconGlyph,
     required this.paperCount,
     required this.questionCount,
-    required this.isEntitled,
+    required this.isOpen,
     this.progress,
   });
 
@@ -18,9 +18,12 @@ class SubjectUiModel {
 
   final int paperCount;
   final int questionCount;
-  final bool isEntitled;
 
-  /// 0.0–1.0. Null when not entitled (progress has no meaning for a
+  /// Whether this row can be opened right now — the row's own answer from
+  /// `AccessPolicy`, not the stream-level entitlement flag.
+  final bool isOpen;
+
+  /// 0.0–1.0. Null when the row is closed (progress has no meaning for a
   /// subject the student can't open yet) or when the student hasn't
   /// attempted anything.
   final double? progress;

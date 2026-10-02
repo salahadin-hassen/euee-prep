@@ -17,7 +17,7 @@ class MockSubjects {
           iconGlyph: '🧪',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: false,
+          isOpen: false,
         ),
         SubjectUiModel(
           subjectId: 'mathematics',
@@ -25,7 +25,7 @@ class MockSubjects {
           iconGlyph: '📐',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: true,
+          isOpen: true,
           progress: 0.62,
         ),
         SubjectUiModel(
@@ -34,7 +34,7 @@ class MockSubjects {
           iconGlyph: '🧬',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: false,
+          isOpen: false,
         ),
         SubjectUiModel(
           subjectId: 'chemistry',
@@ -42,7 +42,7 @@ class MockSubjects {
           iconGlyph: '⚗️',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: true,
+          isOpen: true,
           progress: 0.0,
         ),
         SubjectUiModel(
@@ -51,7 +51,7 @@ class MockSubjects {
           iconGlyph: '📖',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: true,
+          isOpen: true,
           progress: 0.31,
         ),
         SubjectUiModel(
@@ -60,7 +60,7 @@ class MockSubjects {
           iconGlyph: '🧩',
           paperCount: 0,
           questionCount: 0,
-          isEntitled: false,
+          isOpen: false,
         ),
       ];
 }
