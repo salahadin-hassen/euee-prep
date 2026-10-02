@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/navigation/app_shell.dart';
 import 'core/providers.dart';
 import 'features/streams/domain/models/stream_model.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/streams/presentation/onboarding_screen.dart';
-import 'features/subjects/presentation/subject_list_screen.dart';
 
 void main() {
   runApp(
@@ -40,11 +40,11 @@ class EueePrepApp extends StatelessWidget {
             );
           case '/subjects':
             return MaterialPageRoute(
-              builder: (_) => const SubjectListScreen(),
+              builder: (_) => const AppShell(initialIndex: 1),
             );
           default:
             return MaterialPageRoute(
-              builder: (_) => const SubjectListScreen(),
+              builder: (_) => const AppShell(),
             );
         }
       },
@@ -67,7 +67,7 @@ final _seedStreamsProvider = FutureProvider<void>((ref) async {
 });
 
 /// Routes to OnboardingScreen on first launch (no Preferred Stream),
-/// or to SubjectListScreen when a Preferred Stream has been established.
+/// or to the Home/Subjects shell when a Preferred Stream exists.
 class _AppHome extends ConsumerWidget {
   const _AppHome();
 
@@ -87,7 +87,8 @@ class _AppHome extends ConsumerWidget {
 }
 
 /// Routes to OnboardingScreen on first launch (no Preferred Stream),
-/// or to SubjectListScreen when a Preferred Stream has been established.
+/// or to the Home tab of the shell when a Preferred Stream has been
+/// established.
 class _AppHomeContent extends ConsumerWidget {
   const _AppHomeContent();
 
@@ -105,7 +106,7 @@ class _AppHomeContent extends ConsumerWidget {
         if (streamId == null) {
           return const OnboardingScreen();
         }
-        return const SubjectListScreen();
+        return const AppShell();
       },
     );
   }

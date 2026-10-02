@@ -6,7 +6,7 @@ import '../../../core/design/app_button.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/providers.dart';
 import '../domain/models/stream_model.dart';
-import '../../subjects/presentation/subject_list_screen.dart';
+import '../../../core/navigation/app_shell.dart';
 
 /// Onboarding screen for first-launch Preferred Stream selection.
 ///
@@ -44,9 +44,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final db = ref.read(databaseProvider);
     await db.setSetting('preferred_stream_id', streamId.toString());
 
+    // Preferred Stream is read through a cached FutureProvider — refresh it
+    // so the shell that is about to mount sees the value just written.
+    ref.invalidate(preferredStreamIdProvider);
+
     if (!mounted) return;
     navigator.pushReplacement(
-      MaterialPageRoute(builder: (_) => const SubjectListScreen()),
+      MaterialPageRoute(builder: (_) => const AppShell()),
     );
   }
 
