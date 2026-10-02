@@ -88,8 +88,8 @@ class ContinueStudyingCard extends StatelessWidget {
             fillColor: Colors.white,
           ),
           const SizedBox(height: AppSpacing.spaceMd),
-          SizedBox(
-            width: double.infinity,
+          Align(
+            alignment: Alignment.centerLeft,
             child: Semantics(
               button: true,
               label: 'Continue ${session.subjectName} '
@@ -101,9 +101,12 @@ class ContinueStudyingCard extends StatelessWidget {
                   onTap: onContinue,
                   borderRadius: BorderRadius.circular(AppRadius.radiusMd),
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spaceMd,
+                      vertical: 12,
+                    ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'Continue',

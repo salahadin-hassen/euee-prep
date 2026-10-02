@@ -80,7 +80,7 @@ class SubjectCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.spaceXs),
                     Text(
                       '${subject.paperCount} $paperLabel'
-                      ' \u2022 ${subject.questionCount} $questionLabel',
+                      ' \u00B7 ${subject.questionCount} $questionLabel',
                       style: TextStyle(
                         fontSize: 13,
                         color: subject.isOpen

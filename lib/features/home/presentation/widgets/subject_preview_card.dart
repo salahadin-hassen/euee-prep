@@ -83,7 +83,6 @@ class _SubjectPreviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = SubjectPalette.accentOf(subject.slug);
-    final progress = stats.progress ?? 0;
 
     return Semantics(
       button: true,
@@ -141,11 +140,16 @@ class _SubjectPreviewRow extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.spaceSm),
-                    ProgressBar(
-                      progress: progress,
-                      fillColor: accent,
-                    ),
-                    const SizedBox(height: AppSpacing.spaceSm),
+                    if (stats.progress != null) ...[
+                      ProgressBar(
+                        progress: stats.progress!,
+                        fillColor: accent,
+                      ),
+                      const SizedBox(height: AppSpacing.spaceSm),
+                    ] else
+                      // No progress yet — the reference screen draws no
+                      // track for a subject with nothing attempted.
+                      const SizedBox(height: 6),
                     Text(
                       _caption,
                       style: AppTypography.typeCaption,

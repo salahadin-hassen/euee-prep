@@ -60,37 +60,27 @@ class UnlockBar extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.radiusCard),
-          child: Row(
+          child: const Row(
             children: [
-              const Text('\u{1F513}', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: AppSpacing.spaceSm),
+              Text('\u{1F513}', style: TextStyle(fontSize: 18)),
+              SizedBox(width: AppSpacing.spaceSm),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Unlock all subjects',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'One-time payment \u2022 200 birr',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Unlock all subjects',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                size: AppIconSize.iconSizeMd,
-                color: Colors.white.withValues(alpha: 0.75),
+              Text(
+                '200 birr',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -114,6 +104,12 @@ class UnlockVideoRow extends StatelessWidget {
       color: AppBrand.blueTint,
       child: const Row(
         children: [
+          Icon(
+            Icons.ondemand_video_outlined,
+            size: AppIconSize.iconSizeMd,
+            color: AppBrand.blue,
+          ),
+          SizedBox(width: AppSpacing.spaceSm),
           Expanded(
             child: Text(
               'Offline video on how to unlock all',

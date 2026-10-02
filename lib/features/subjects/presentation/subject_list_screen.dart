@@ -179,7 +179,11 @@ class _SubjectListView extends ConsumerWidget {
       items.add(
         _UnlockAllCard(
           streamName: streamName,
-          lockedSubjectTitles: subjects.map((s) => s.title).toList(),
+          lockedSubjectTitles: [
+            for (var i = 0; i < subjects.length; i++)
+              if (!AccessPolicy.isOpen(index: i, isEntitled: isEntitled))
+                subjects[i].title,
+          ],
           onUnlock: () => _openUnlock(context, ref),
         ),
       );
@@ -226,7 +230,9 @@ class _UnlockAllCard extends StatelessWidget {
   final VoidCallback onUnlock;
 
   String get _listOfNames {
-    if (lockedSubjectTitles.isEmpty) return '';
+    // Every row is inside the free-sample window — the upsell is for the
+    // whole pack, so name no individual subject.
+    if (lockedSubjectTitles.isEmpty) return 'every';
     if (lockedSubjectTitles.length == 1) return lockedSubjectTitles.single;
     if (lockedSubjectTitles.length == 2) {
       return '${lockedSubjectTitles.first} and ${lockedSubjectTitles.last}';

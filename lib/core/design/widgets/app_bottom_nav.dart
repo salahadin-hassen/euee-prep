@@ -74,8 +74,8 @@ class AppBottomNav extends StatelessWidget {
 
   IconData _iconOf(AppNavItem item) => switch (item) {
         AppNavItem.home => Icons.home_outlined,
-        AppNavItem.subjects => Icons.menu_book_outlined,
-        AppNavItem.progress => Icons.insights_outlined,
+        AppNavItem.subjects => Icons.widgets_outlined,
+        AppNavItem.progress => Icons.show_chart,
         AppNavItem.more => Icons.more_horiz,
       };
 }
